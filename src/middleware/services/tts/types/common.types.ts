@@ -1,0 +1,334 @@
+/**
+ * Common types and interfaces for TTS Middleware
+ *
+ * These types form the contract between the TTS middleware and consuming applications.
+ * All provider parameters are pre-typed to prevent breaking API changes when adding new providers.
+ */
+
+/**
+ * Supported TTS providers
+ *
+ * @MVP ✅ AZURE - Microsoft Azure Speech Services (EU-compliant, free tier)
+ * @Future 🔮 OPENAI - OpenAI TTS API
+ * @Future 🔮 ELEVENLABS - ElevenLabs TTS API
+ * @Future 🔮 GOOGLE - Google Cloud Text-to-Speech
+ * @Future 🔮 DEEPGRAM - Deepgram TTS API
+ */
+export enum TTSProvider {
+  AZURE = 'azure',
+  OPENAI = 'openai',
+  ELEVENLABS = 'elevenlabs',
+  GOOGLE = 'google',
+  DEEPGRAM = 'deepgram',
+}
+
+/**
+ * Audio format options supported across providers
+ *
+ * @MVP ✅ mp3, wav, opus - Supported by Azure
+ * @Future 🔮 aac, flac - Additional formats for other providers
+ */
+export type AudioFormat = 'mp3' | 'wav' | 'opus' | 'aac' | 'flac';
+
+/**
+ * Audio configuration options
+ */
+export interface AudioOptions {
+  /**
+   * Audio output format
+   * @MVP ✅ Implemented: mp3, wav, opus
+   * @Future 🔮 aac, flac
+   * @default 'mp3'
+   */
+  format?: AudioFormat;
+
+  /**
+   * Speech speed multiplier
+   * @MVP ✅ Implemented (Azure)
+   * @range 0.5 - 2.0
+   * @default 1.0
+   * @providers All providers support this
+   */
+  speed?: number;
+
+  /**
+   * Pitch adjustment in semitones
+   * @Future 🔮 Google, Azure
+   * @range -20 to 20
+   * @default 0
+   */
+  pitch?: number;
+
+  /**
+   * Volume gain in decibels
+   * @Future 🔮 Google
+   * @range -96 to 16
+   * @default 0
+   */
+  volumeGainDb?: number;
+
+  /**
+   * Audio sample rate in Hz
+   * @MVP ✅ Implemented (Azure)
+   * @options 8000, 16000, 24000, 48000
+   * @default 24000
+   */
+  sampleRate?: number;
+}
+
+/**
+ * Voice configuration
+ */
+export interface VoiceConfig {
+  /**
+   * Voice identifier (provider-specific)
+   * @MVP ✅ Implemented
+   * @example Azure: 'de-DE-KatjaNeural', 'en-US-JennyNeural'
+   * @example OpenAI: 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'
+   * @example ElevenLabs: 'voice_xyz123'
+   */
+  id: string;
+}
+
+/**
+ * TTS synthesis request
+ *
+ * @description Request object for converting text to speech
+ *
+ * @example
+ * ```typescript
+ * const request: TTSSynthesizeRequest = {
+ *   text: "Hello, how are you?",
+ *   provider: TTSProvider.AZURE,
+ *   voice: { id: 'en-US-JennyNeural' },
+ *   audio: { speed: 1.0, format: 'mp3' }
+ * };
+ * ```
+ */
+export interface TTSSynthesizeRequest {
+  /**
+   * Input text to synthesize
+   * @MVP ✅ Implemented
+   * @example "Hello, how are you?"
+   */
+  text: string;
+
+  /**
+   * TTS provider to use
+   * @MVP ✅ Implemented
+   * @optional Uses default provider if not specified
+   * @default TTSProvider.AZURE
+   */
+  provider?: TTSProvider;
+
+  /**
+   * Voice configuration
+   * @MVP ✅ Implemented
+   */
+  voice: VoiceConfig;
+
+  /**
+   * Audio output options
+   * @MVP ✅ Implemented (Azure supports format, speed, sampleRate)
+   * @Future 🔮 pitch, volumeGainDb
+   */
+  audio?: AudioOptions;
+
+  /**
+   * Provider-specific options
+   * @MVP ✅ Implemented (Azure: emotion, style)
+   * @Future 🔮 OpenAI, ElevenLabs, Google, Deepgram options
+   *
+   * @description Use this for provider-specific parameters that don't fit
+   * into the universal interface. See provider-options.types.ts for
+   * typed options per provider.
+   *
+   * @example Azure
+   * ```typescript
+   * providerOptions: { emotion: 'cheerful', style: 'chat' }
+   * ```
+   *
+   * @example ElevenLabs
+   * ```typescript
+   * providerOptions: { stability: 0.5, similarity_boost: 0.75 }
+   * ```
+   */
+  providerOptions?: Record<string, unknown>;
+}
+
+/**
+ * TTS response metadata
+ */
+export interface TTSResponseMetadata {
+  /**
+   * Provider that generated the audio
+   * @MVP ✅ Implemented
+   */
+  provider: string;
+
+  /**
+   * Voice ID that was used
+   * @MVP ✅ Implemented
+   */
+  voice: string;
+
+  /**
+   * Audio duration in milliseconds
+   * @MVP ✅ Implemented
+   */
+  duration: number;
+
+  /**
+   * Audio format of the output
+   * @MVP ✅ Implemented
+   */
+  audioFormat: string;
+
+  /**
+   * Sample rate in Hz
+   * @MVP ✅ Implemented
+   */
+  sampleRate: number;
+}
+
+/**
+ * Billing information for the TTS request
+ *
+ * @description Consumer application uses this to calculate costs based on
+ * their provider rates. Middleware does not calculate costs.
+ */
+export interface TTSBillingInfo {
+  /**
+   * Number of characters in the input text
+   * @MVP ✅ Implemented
+   *
+   * @description This count excludes SSML markup (for providers that use SSML internally).
+   * The count includes spaces, punctuation, and newlines.
+   *
+   * Consumer apps calculate cost as:
+   * - Azure: (characters / 1_000_000) * $16
+   * - OpenAI: (characters / 1_000_000) * $15
+   * - ElevenLabs: (characters / 1_000_000) * $150-200
+   */
+  characters: number;
+
+  /**
+   * Number of tokens used (for token-based providers)
+   * @Future 🔮 OpenAI gpt-4o-mini-tts
+   *
+   * @description Only populated for token-based providers like OpenAI's newer models.
+   * Most providers use character-based billing, so this will be undefined.
+   */
+  tokensUsed?: number;
+}
+
+/**
+ * TTS synthesis response
+ *
+ * @description Response from TTS synthesis containing audio data,
+ * metadata, and billing information
+ */
+export interface TTSResponse {
+  /**
+   * Raw audio data as Buffer
+   * @MVP ✅ Implemented
+   *
+   * @description Binary audio data in the requested format (MP3, WAV, etc.)
+   *
+   * @example
+   * ```typescript
+   * import fs from 'fs';
+   * fs.writeFileSync('output.mp3', response.audio);
+   * ```
+   */
+  audio: Buffer;
+
+  /**
+   * Metadata about the synthesis
+   * @MVP ✅ Implemented
+   */
+  metadata: TTSResponseMetadata;
+
+  /**
+   * Billing information for cost calculation
+   * @MVP ✅ Implemented
+   */
+  billing: TTSBillingInfo;
+}
+
+/**
+ * Voice information (for future voice catalog feature)
+ *
+ * @Future 🔮 Not implemented in MVP - used for listVoices() API
+ */
+export interface TTSVoice {
+  /**
+   * Unique voice identifier
+   */
+  id: string;
+
+  /**
+   * Human-readable voice name
+   */
+  name: string;
+
+  /**
+   * Language code (e.g., 'en-US', 'de-DE')
+   */
+  language: string;
+
+  /**
+   * Voice gender
+   */
+  gender: 'male' | 'female' | 'neutral';
+
+  /**
+   * Provider that offers this voice
+   */
+  provider: TTSProvider;
+
+  /**
+   * Additional provider-specific metadata
+   */
+  metadata?: TTSVoiceMetadata;
+}
+
+/**
+ * Provider-specific voice metadata
+ *
+ * @Future 🔮 Not implemented in MVP
+ */
+export interface TTSVoiceMetadata {
+  /**
+   * Voice quality/tier (e.g., 'standard', 'neural', 'premium')
+   */
+  quality?: string;
+
+  /**
+   * Supported styles (Azure-specific)
+   */
+  styles?: string[];
+
+  /**
+   * Supported emotions (Azure-specific)
+   */
+  emotions?: string[];
+
+  /**
+   * Additional properties
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * Error codes for TTS operations
+ */
+export enum TTSErrorCode {
+  INVALID_CONFIG = 'INVALID_CONFIG',
+  INVALID_VOICE = 'INVALID_VOICE',
+  QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
+  PROVIDER_UNAVAILABLE = 'PROVIDER_UNAVAILABLE',
+  SYNTHESIS_FAILED = 'SYNTHESIS_FAILED',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}

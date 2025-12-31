@@ -28,7 +28,7 @@
   "author": "LoolyLabs Team",
   "license": "MIT",
   "dependencies": {
-    "@azure/cognitiveservices-speech": "^1.38.0"
+    "microsoft-cognitiveservices-speech-sdk": "^1.38.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",
