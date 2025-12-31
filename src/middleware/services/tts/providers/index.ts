@@ -17,7 +17,7 @@ export {
 } from './base-tts-provider';
 
 // Provider implementations (MVP)
-// export { AzureProvider } from './azure-provider'; // Will be exported after TTS-004
+export { AzureProvider } from './azure-provider';
 
 // Future provider implementations will be exported here:
 // export { OpenAIProvider } from './openai-provider';
