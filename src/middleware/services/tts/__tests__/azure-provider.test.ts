@@ -556,7 +556,7 @@ describe('AzureProvider', () => {
       // Metadata
       expect(response.metadata.provider).toBe('azure');
       expect(response.metadata.voice).toBe('en-US-JennyNeural');
-      expect(response.metadata.duration).toBeGreaterThan(0);
+      expect(response.metadata.duration).toBeGreaterThanOrEqual(0); // Mock may return instantly (0ms)
       expect(response.metadata.audioFormat).toBe('mp3');
       expect(response.metadata.sampleRate).toBe(24000);
 
