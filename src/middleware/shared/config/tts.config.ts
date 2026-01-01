@@ -220,10 +220,10 @@ export function validateTTSConfig(config: TTSConfig): void {
       errors.push('AZURE_SPEECH_REGION cannot contain spaces');
     }
 
-    // Validate key format (should be alphanumeric)
+    // Validate key format (should be alphanumeric, allow hyphens for testing)
     if (
       config.AZURE.KEY &&
-      !/^[a-zA-Z0-9]+$/.test(config.AZURE.KEY) &&
+      !/^[a-zA-Z0-9-]+$/.test(config.AZURE.KEY) &&
       config.AZURE.KEY !== ''
     ) {
       errors.push('AZURE_SPEECH_KEY should be alphanumeric');

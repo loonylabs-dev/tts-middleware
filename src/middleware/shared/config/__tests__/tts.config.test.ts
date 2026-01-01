@@ -15,6 +15,7 @@ describe('TTS Configuration', () => {
     // Reset environment before each test
     jest.resetModules();
     process.env = { ...originalEnv };
+    process.env.NODE_ENV = 'test';
   });
 
   afterEach(() => {

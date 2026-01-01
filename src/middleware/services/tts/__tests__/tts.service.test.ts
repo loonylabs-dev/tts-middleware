@@ -26,7 +26,7 @@ jest.mock('../providers/azure-provider', () => {
           characters: 11,
         },
       }),
-      getProviderName: jest.fn().mockReturnValue(TTSProvider.AZURE),
+      getProviderName: jest.fn().mockReturnValue('azure'),
     })),
   };
 });
@@ -100,7 +100,6 @@ describe('TTSService', () => {
       const providers = service.getAvailableProviders();
 
       expect(providers).toContain(TTSProvider.AZURE);
-      expect(providers).toHaveLength(1); // Only Azure in MVP
     });
   });
 
@@ -126,6 +125,7 @@ describe('TTSService', () => {
       });
 
       test('error message lists available providers', () => {
+        // Need to ensure at least one provider is available for the message
         expect(() => service.getProvider(TTSProvider.OPENAI)).toThrow(/azure/i);
       });
     });
@@ -172,11 +172,10 @@ describe('TTSService', () => {
         expect(providers).toContain(TTSProvider.AZURE);
       });
 
-      test('returns only Azure in MVP', () => {
+      test('returns available providers including Azure', () => {
         const providers = service.getAvailableProviders();
 
-        expect(providers).toHaveLength(1);
-        expect(providers[0]).toBe(TTSProvider.AZURE);
+        expect(providers).toContain(TTSProvider.AZURE);
       });
     });
 

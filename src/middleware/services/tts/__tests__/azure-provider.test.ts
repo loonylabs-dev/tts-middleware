@@ -79,6 +79,7 @@ describe('AzureProvider', () => {
     process.env = { ...originalEnv };
     process.env.AZURE_SPEECH_KEY = 'test-key';
     process.env.AZURE_SPEECH_REGION = 'germanywestcentral';
+    delete process.env.AZURE_SPEECH_ENDPOINT;
 
     // Reset mocks
     jest.clearAllMocks();

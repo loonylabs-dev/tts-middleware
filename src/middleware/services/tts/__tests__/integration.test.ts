@@ -75,6 +75,7 @@ describe('TTS Middleware Integration Tests', () => {
     process.env.AZURE_SPEECH_KEY = 'integration-test-key-123';
     process.env.AZURE_SPEECH_REGION = 'germanywestcentral';
     process.env.TTS_DEFAULT_PROVIDER = 'azure';
+    delete process.env.AZURE_SPEECH_ENDPOINT;
 
     // Reset mocks
     jest.clearAllMocks();
