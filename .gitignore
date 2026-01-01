@@ -34,6 +34,9 @@ yarn-error.log*
 Thumbs.db
 .DS_Store
 
+# Test output
+output/
+
 # Temporary files
 *.tmp
 *.temp
