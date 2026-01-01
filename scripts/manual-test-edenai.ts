@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ttsService } from '../src/middleware/services/tts/tts.service';
 import { TTSProvider } from '../src/middleware/services/tts/types';
 
 /**
@@ -36,7 +35,12 @@ function loadEnv() {
 }
 
 async function testEdenAI() {
+  // 1. Load environment variables FIRST
   loadEnv();
+
+  // 2. Dynamically import ttsService AFTER env vars are loaded
+  // This ensures the singleton is initialized with the correct config
+  const { ttsService } = await import('../src/middleware/services/tts/tts.service');
 
   console.log('\n--- Starting EdenAI Manual Test ---\n');
 
