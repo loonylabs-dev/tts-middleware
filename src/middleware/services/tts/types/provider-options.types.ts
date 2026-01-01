@@ -341,6 +341,114 @@ export interface DeepgramProviderOptions {
 }
 
 /**
+ * EdenAI TTS provider options
+ *
+ * @description EdenAI is a multi-provider aggregator that provides access
+ * to multiple TTS providers through a single API.
+ *
+ * @provider EdenAI (multi-provider aggregator)
+ *
+ * @see https://docs.edenai.co/reference/text_to_speech_create
+ */
+export interface EdenAIProviderOptions {
+  /**
+   * Underlying provider to use via EdenAI
+   *
+   * @description EdenAI acts as an aggregator, routing requests to the selected provider.
+   *
+   * @options
+   * - 'amazon': Amazon Polly
+   * - 'google': Google Cloud TTS
+   * - 'ibm': IBM Watson TTS
+   * - 'microsoft': Microsoft Azure Speech
+   * - 'openai': OpenAI TTS
+   * - 'elevenlabs': ElevenLabs TTS
+   *
+   * @default Auto-selected by EdenAI based on language/voice
+   */
+  provider?:
+    | 'amazon'
+    | 'google'
+    | 'ibm'
+    | 'microsoft'
+    | 'openai'
+    | 'elevenlabs';
+
+  /**
+   * Speaking rate multiplier
+   *
+   * @description Controls the speed of speech synthesis
+   *
+   * @range 0.25 - 4.0
+   * @default 1.0
+   */
+  speaking_rate?: number;
+
+  /**
+   * Pitch adjustment in semitones
+   *
+   * @description Adjusts the pitch of the synthesized voice
+   *
+   * @range -20.0 to 20.0
+   * @default 0.0
+   */
+  speaking_pitch?: number;
+
+  /**
+   * Volume adjustment in decibels
+   *
+   * @description Adjusts the volume of the synthesized speech
+   *
+   * @range -96.0 to 16.0
+   * @default 0.0
+   */
+  speaking_volume?: number;
+
+  /**
+   * Audio format override
+   *
+   * @description If not specified, uses the format from audio.format
+   *
+   * @options 'mp3', 'wav', 'ogg', 'flac'
+   * @default 'mp3'
+   */
+  audio_format?: 'mp3' | 'wav' | 'ogg' | 'flac';
+
+  /**
+   * Sample rate in Hz
+   *
+   * @description If not specified, uses the sampleRate from audio options
+   *
+   * @options 8000, 16000, 22050, 24000, 44100, 48000
+   * @default 24000
+   */
+  sampling_rate?: number;
+
+  /**
+   * Fallback providers
+   *
+   * @description List of provider names to use as fallbacks if the primary provider fails
+   *
+   * @example ['google', 'amazon', 'microsoft']
+   */
+  fallback_providers?: string[];
+
+  /**
+   * Webhook URL for async notifications
+   *
+   * @description URL to receive notifications when synthesis completes (for async requests)
+   */
+  webhook_url?: string;
+
+  /**
+   * Webhook receiver identifier
+   *
+   * @description Identifier for the webhook receiver
+   */
+  webhook_receiver?: string;
+}
+
+/**
  * Union type of all provider options
  *
  * @description Use this type when you need to accept any provider options
@@ -350,7 +458,8 @@ export type ProviderOptions =
   | OpenAIProviderOptions
   | ElevenLabsProviderOptions
   | GoogleCloudProviderOptions
-  | DeepgramProviderOptions;
+  | DeepgramProviderOptions
+  | EdenAIProviderOptions;
 
 /**
  * Type guard to check if options are for Azure
@@ -415,5 +524,22 @@ export function isDeepgramOptions(
     typeof options === 'object' &&
     options !== null &&
     ('encoding' in options || 'container' in options)
+  );
+}
+
+/**
+ * Type guard to check if options are for EdenAI
+ */
+export function isEdenAIOptions(
+  options: unknown
+): options is EdenAIProviderOptions {
+  return (
+    typeof options === 'object' &&
+    options !== null &&
+    ('speaking_rate' in options ||
+      'speaking_pitch' in options ||
+      'speaking_volume' in options ||
+      'fallback_providers' in options ||
+      'webhook_url' in options)
   );
 }

@@ -54,6 +54,19 @@ export interface AzureConfig {
 }
 
 /**
+ * EdenAI Configuration
+ */
+export interface EdenAIConfig {
+  /**
+   * EdenAI API key
+   * @env EDENAI_API_KEY
+   * @required true
+   * @example 'edenai_xxx...'
+   */
+  API_KEY: string;
+}
+
+/**
  * TTS Middleware Configuration Object
  */
 export interface TTSConfig {
@@ -68,6 +81,11 @@ export interface TTSConfig {
    * Azure Speech Services configuration
    */
   AZURE: AzureConfig;
+
+  /**
+   * EdenAI configuration
+   */
+  EDENAI: EdenAIConfig;
 
   /**
    * Enable debug logging
@@ -113,6 +131,7 @@ export function getTTSConfig(): TTSConfig {
   const azureKey = process.env.AZURE_SPEECH_KEY || '';
   const azureRegion = process.env.AZURE_SPEECH_REGION?.trim() || 'germanywestcentral';
   const azureEndpoint = process.env.AZURE_SPEECH_ENDPOINT;
+  const edenaiApiKey = process.env.EDENAI_API_KEY || '';
   const defaultProvider =
     (process.env.TTS_DEFAULT_PROVIDER as TTSProvider) || TTSProvider.AZURE;
   const debug = process.env.TTS_DEBUG === 'true';
@@ -137,6 +156,9 @@ export function getTTSConfig(): TTSConfig {
       ENDPOINT: azureEndpoint,
       DSGVO_COMPLIANT: isDsgvoCompliant,
       FREE_TIER_CHARS_PER_MONTH: 500_000,
+    },
+    EDENAI: {
+      API_KEY: edenaiApiKey,
     },
     DEBUG: debug,
     MAX_TEXT_LENGTH: 3000,
@@ -210,6 +232,15 @@ export function validateTTSConfig(config: TTSConfig): void {
     // Validate endpoint format if provided
     if (config.AZURE.ENDPOINT && !config.AZURE.ENDPOINT.startsWith('https://')) {
       errors.push('AZURE_SPEECH_ENDPOINT must start with https://');
+    }
+  }
+
+  // Validate EdenAI configuration (if used as default provider)
+  if (config.DEFAULT_PROVIDER === TTSProvider.EDENAI) {
+    if (!config.EDENAI.API_KEY) {
+      errors.push(
+        'EDENAI_API_KEY is required when using EdenAI provider (set in environment variable)'
+      );
     }
   }
 

@@ -16,8 +16,9 @@ export {
   NetworkError,
 } from './base-tts-provider';
 
-// Provider implementations (MVP)
+// Provider implementations
 export { AzureProvider } from './azure-provider';
+export { EdenAIProvider } from './edenai-provider';
 
 // Future provider implementations will be exported here:
 // export { OpenAIProvider } from './openai-provider';

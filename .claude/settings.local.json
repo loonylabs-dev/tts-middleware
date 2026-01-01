@@ -5,7 +5,9 @@
       "Bash(git add:*)",
       "Bash(npm install:*)",
       "Bash(npm test:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

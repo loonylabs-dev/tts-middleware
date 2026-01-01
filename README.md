@@ -2,10 +2,10 @@
 
 Provider-agnostic Text-to-Speech middleware for the LLM Middleware project.
 
-**Status:** ✅ MVP Complete (Azure Speech Services)
-**Effort:** 27/27 Story Points (100%)
-**Coverage:** 96.77% (Target: >80%) ✅
-**Tests:** 312 passing ✅
+**Status:** ✅ MVP Complete (Azure + EdenAI)
+**Effort:** 32/32 Story Points (100%)
+**Coverage:** 94.91% (Target: >80%) ✅
+**Tests:** 345 passing ✅
 
 ---
 
@@ -201,26 +201,28 @@ npm run format
 ```
 File                         | % Stmts | % Branch | % Funcs | % Lines |
 -----------------------------|---------|----------|---------|---------|
-All files                    |   96.77 |     90.5 |     100 |   96.77 |
+All files                    |   94.91 |     89.2 |   98.36 |   94.91 |
 -----------------------------|---------|----------|---------|---------|
-services/tts/                |     100 |      100 |     100 |     100 |
-  tts.service.ts             |     100 |      100 |     100 |     100 | ✅
-services/tts/providers/      |   95.77 |    88.63 |     100 |   95.77 |
+services/tts/                |   96.15 |      100 |     100 |   96.15 |
+  tts.service.ts             |   96.15 |      100 |     100 |   96.15 | ✅
+services/tts/providers/      |   95.08 |    93.18 |     100 |   95.08 |
   azure-provider.ts          |   94.38 |     87.5 |     100 |   94.38 | ✅
-  base-tts-provider.ts       |   98.11 |       90 |     100 |   98.11 | ✅
-services/tts/types/          |     100 |      100 |     100 |     100 |
+  base-tts-provider.ts       |     100 |      100 |     100 |     100 | ✅
+  edenai-provider.ts         |   92.68 |    93.18 |     100 |   92.68 | ✅
+services/tts/types/          |   96.29 |    77.41 |    87.5 |   96.29 |
   common.types.ts            |     100 |      100 |     100 |     100 | ✅
-  provider-options.types.ts  |     100 |      100 |     100 |     100 | ✅
+  provider-options.types.ts  |   91.66 |    74.07 |   83.33 |   91.66 | ✅
 services/tts/utils/          |     100 |      100 |     100 |     100 |
   character-counter.utils.ts |     100 |      100 |     100 |     100 | ✅ (billing-critical)
-shared/config/               |   92.85 |    82.75 |     100 |   92.85 |
-  tts.config.ts              |   92.85 |    82.75 |     100 |   92.85 | ✅
+shared/config/               |   89.13 |    78.78 |     100 |   89.13 |
+  tts.config.ts              |   89.13 |    78.78 |     100 |   89.13 | ✅
 
-Total Tests: 312 passing ✅
+Total Tests: 345 passing ✅
 - types.test.ts: 48 tests
 - base-tts-provider.test.ts: 46 tests
 - character-counter.test.ts: 68 tests
 - azure-provider.test.ts: 25 tests
+- edenai-provider.test.ts: 33 tests
 - tts.service.test.ts: 34 tests
 - exports.test.ts: 44 tests
 - tts.config.test.ts: 27 tests
@@ -273,6 +275,7 @@ Follows the same pattern as LLM Middleware:
 ```typescript
 BaseTTSProvider (abstract)
   ├─ AzureProvider ✅ (MVP)
+  ├─ EdenAIProvider ✅ (Multi-provider aggregator)
   ├─ OpenAIProvider 🔮 (Future)
   ├─ ElevenLabsProvider 🔮 (Future)
   ├─ GoogleProvider 🔮 (Future)
@@ -308,17 +311,18 @@ Refer to:
 
 ## 🎉 Project Status: Complete
 
-**Implementation:** ✅ All 27 story points completed
-**Quality:** ✅ 96.77% code coverage (target: >80%)
-**Tests:** ✅ 312 tests passing
+**Implementation:** ✅ All 32 story points completed (MVP + EdenAI)
+**Quality:** ✅ 94.91% code coverage (target: >80%)
+**Tests:** ✅ 345 tests passing
 **Documentation:** ✅ Complete with examples
 
 ### What's Working
 
 - ✅ Azure Speech Services integration
-- ✅ Provider-agnostic architecture (ready for OpenAI, ElevenLabs, Google, Deepgram)
+- ✅ EdenAI multi-provider aggregator (access to Amazon, Google, IBM, Microsoft, OpenAI, ElevenLabs via one API)
+- ✅ Provider-agnostic architecture (ready for direct OpenAI, ElevenLabs, Google, Deepgram)
 - ✅ Accurate character counting (billing-critical)
-- ✅ SSML generation with emotion/style support
+- ✅ SSML generation with emotion/style support (Azure)
 - ✅ Comprehensive error handling
 - ✅ DSGVO/GDPR compliance detection
 - ✅ TypeScript strict mode

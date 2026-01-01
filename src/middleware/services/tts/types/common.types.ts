@@ -9,6 +9,7 @@
  * Supported TTS providers
  *
  * @MVP ✅ AZURE - Microsoft Azure Speech Services (EU-compliant, free tier)
+ * @Current ✅ EDENAI - EdenAI multi-provider aggregator
  * @Future 🔮 OPENAI - OpenAI TTS API
  * @Future 🔮 ELEVENLABS - ElevenLabs TTS API
  * @Future 🔮 GOOGLE - Google Cloud Text-to-Speech
@@ -16,6 +17,7 @@
  */
 export enum TTSProvider {
   AZURE = 'azure',
+  EDENAI = 'edenai',
   OPENAI = 'openai',
   ELEVENLABS = 'elevenlabs',
   GOOGLE = 'google',

@@ -30,15 +30,16 @@ import {
 describe('TTSProvider enum', () => {
   test('has all expected provider values', () => {
     expect(TTSProvider.AZURE).toBe('azure');
+    expect(TTSProvider.EDENAI).toBe('edenai');
     expect(TTSProvider.OPENAI).toBe('openai');
     expect(TTSProvider.ELEVENLABS).toBe('elevenlabs');
     expect(TTSProvider.GOOGLE).toBe('google');
     expect(TTSProvider.DEEPGRAM).toBe('deepgram');
   });
 
-  test('has exactly 5 providers', () => {
+  test('has exactly 6 providers', () => {
     const providerKeys = Object.keys(TTSProvider);
-    expect(providerKeys).toHaveLength(5);
+    expect(providerKeys).toHaveLength(6);
   });
 
   test('enum values are lowercase strings', () => {

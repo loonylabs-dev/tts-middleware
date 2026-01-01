@@ -43,6 +43,7 @@ export type {
   ElevenLabsProviderOptions,
   GoogleCloudProviderOptions,
   DeepgramProviderOptions,
+  EdenAIProviderOptions,
   ProviderOptions,
 } from './types';
 
@@ -52,12 +53,14 @@ export {
   isElevenLabsOptions,
   isGoogleCloudOptions,
   isDeepgramOptions,
+  isEdenAIOptions,
 } from './types';
 
 // ===== Providers =====
 export {
   BaseTTSProvider,
   AzureProvider,
+  EdenAIProvider,
 } from './providers';
 
 // ===== Errors =====
