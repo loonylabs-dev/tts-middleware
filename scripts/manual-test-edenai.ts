@@ -97,10 +97,10 @@ async function main() {
   // 2. Run English Test (Google)
   if (runEn) {
     await runSynthesisTest(
-      'English (Google)',
-      {
-        text: 'Hello! This is a test of the Loonylabs TTS middleware using Eden AI with Google.',
-        provider: TTSProvider.EDENAI,
+    'English (Google)',
+    {
+      text: 'Hello! This is a test of the LoonyLabs TTS middleware using Eden AI with Google.',
+      provider: TTSProvider.EDENAI,
         voice: { id: 'en-US' }, 
         audio: { speed: 1.0, format: 'mp3' },
         providerOptions: { provider: 'google' }

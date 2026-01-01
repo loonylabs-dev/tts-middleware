@@ -60,7 +60,7 @@ async function generateSpeech() {
   try {
     // Synthesize speech
     const response = await ttsService.synthesize({
-      text: "Hello! This is a test of the Loonylabs TTS middleware.",
+      text: "Hello! This is a test of the LoonyLabs TTS middleware.",
       voice: { id: "en-US-JennyNeural" }, // Provider-specific voice ID
       audio: {
         format: "mp3",
@@ -172,4 +172,4 @@ Contributions are welcome! Please ensure:
 
 ## 📄 License
 
-[MIT](LICENSE) © 2026 LoolyLabs Team
+[MIT](LICENSE) © 2026 LoonyLabs Team
