@@ -5,7 +5,10 @@ import { TTSProvider, TTSSynthesizeRequest } from '../src/middleware/services/tt
 /**
  * Manual test script for EdenAI provider
  * 
- * Run with: npx ts-node scripts/manual-test-edenai.ts [en] [de]
+ * Usage:
+ *   npx ts-node scripts/manual-test-edenai.ts       - Run all tests
+ *   npx ts-node scripts/manual-test-edenai.ts en    - Run only English (Google)
+ *   npx ts-node scripts/manual-test-edenai.ts de    - Run only German (OpenAI)
  */
 
 // Simple .env parser since dotenv might not be installed

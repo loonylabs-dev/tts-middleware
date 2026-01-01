@@ -4,6 +4,11 @@
   "description": "Provider-agnostic Text-to-Speech middleware for Azure, OpenAI, ElevenLabs, Google Cloud, and Deepgram",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "jest",
@@ -12,7 +17,9 @@
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "clean": "rm -rf dist coverage"
+    "clean": "rm -rf dist coverage",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run test:ci && npm run lint"
   },
   "keywords": [
     "tts",
@@ -23,10 +30,21 @@
     "google-cloud",
     "deepgram",
     "middleware",
-    "provider-agnostic"
+    "provider-agnostic",
+    "speech-synthesis",
+    "voice-generation",
+    "ai-speech"
   ],
   "author": "LoolyLabs Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loonylabs-dev/tts-middleware.git"
+  },
+  "bugs": {
+    "url": "https://github.com/loonylabs-dev/tts-middleware/issues"
+  },
+  "homepage": "https://github.com/loonylabs-dev/tts-middleware#readme",
   "dependencies": {
     "microsoft-cognitiveservices-speech-sdk": "^1.38.0"
   },
