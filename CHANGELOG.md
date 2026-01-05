@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-01-05
+
+### Added
+- **Pluggable Logger Interface:**
+  - `setLogger()` - Replace default console logger with custom implementation (Winston, Pino, etc.)
+  - `silentLogger` - Disable all logging output
+  - `setLogLevel()` / `getLogLevel()` - Control log verbosity (debug, info, warn, error)
+  - `resetLogger()` - Restore default console logger
+- **Documentation:**
+  - `CONTRIBUTING.md` - Contribution guidelines for developers
+
+### Fixed
+- **EdenAI Provider:** Corrected API request payload structure (`settings` object)
+- **Package Exports:** Added root `src/index.ts` for proper module resolution
+
+### Changed
+- **Coverage Threshold:** Increased from 80% to 90% (lines/functions/statements), 85% (branches)
+
 ## [0.1.0] - 2026-01-01
 
 ### Added

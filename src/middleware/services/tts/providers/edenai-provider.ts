@@ -200,26 +200,54 @@ export class EdenAIProvider extends BaseTTSProvider {
     const edenaiRequest: Record<string, unknown> = {
       text,
       language,
-      option: 'FEMALE', // Default to FEMALE, can be parameterized later
+      option: voiceId, // Use voiceId as option for voice selection
       providers: options.provider || 'google', // Top-level providers field
     };
 
-    // Build settings object
+    // Build settings object for provider-specific options
     const settings: Record<string, unknown> = {};
 
     // Speaking rate (maps to speed)
-    const speakingRate = options.speaking_rate || request.audio?.speed;
+    const speakingRate = options.speaking_rate ?? request.audio?.speed;
     if (speakingRate !== undefined) {
-      settings[options.provider || 'google'] = { speaking_rate: speakingRate };
+      settings.speaking_rate = speakingRate;
     }
-    
-    // ... rest of settings handling logic needs adjustment if provider specific settings are required.
-    // For MVP/simple fix, let's just fix the basic structure first.
 
-    // Re-evaluating based on error: "Settings has invalid format, it should be as follow: { `provider_name`: `model_name`, ...}"
-    // This suggests 'settings' might be for model selection?
-    // Let's stick to the simplest valid request first.
-    
+    // Speaking pitch
+    if (options.speaking_pitch !== undefined) {
+      settings.speaking_pitch = options.speaking_pitch;
+    }
+
+    // Speaking volume
+    if (options.speaking_volume !== undefined) {
+      settings.speaking_volume = options.speaking_volume;
+    }
+
+    // Audio format
+    if (options.audio_format !== undefined) {
+      settings.audio_format = options.audio_format;
+    }
+
+    // Sampling rate
+    if (options.sampling_rate !== undefined) {
+      settings.sampling_rate = options.sampling_rate;
+    }
+
+    // Add providers to settings if provider is explicitly specified
+    if (options.provider) {
+      settings.providers = options.provider;
+    }
+
+    // Add settings to request if any settings were specified
+    if (Object.keys(settings).length > 0) {
+      edenaiRequest.settings = settings;
+    }
+
+    // Fallback providers (top-level)
+    if (options.fallback_providers && options.fallback_providers.length > 0) {
+      edenaiRequest.fallback_providers = options.fallback_providers;
+    }
+
     return edenaiRequest;
   }
 

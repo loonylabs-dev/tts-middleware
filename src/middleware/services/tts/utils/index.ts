@@ -12,3 +12,16 @@ export {
   estimateAudioDuration,
   formatCharacterCount,
 } from './character-counter.utils';
+
+// Logger utilities
+export {
+  setLogger,
+  getLogger,
+  resetLogger,
+  setLogLevel,
+  getLogLevel,
+  silentLogger,
+  log,
+} from './logger.utils';
+
+export type { TTSLogger, LogLevel } from './logger.utils';

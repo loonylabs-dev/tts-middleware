@@ -151,6 +151,30 @@ graph TD
 
 ---
 
+## 🔧 Logging Configuration
+
+The middleware includes a pluggable logger interface. By default, it uses `console`, but you can replace it with any logger (Winston, Pino, etc.).
+
+```typescript
+import { setLogger, silentLogger, setLogLevel } from '@loonylabs/tts-middleware';
+
+// Disable all logging (useful for tests)
+setLogger(silentLogger);
+
+// Set minimum log level (debug, info, warn, error)
+setLogLevel('warn'); // Only show warnings and errors
+
+// Use custom logger (e.g., Winston)
+setLogger({
+  info: (msg, meta) => winston.info(msg, meta),
+  warn: (msg, meta) => winston.warn(msg, meta),
+  error: (msg, meta) => winston.error(msg, meta),
+  debug: (msg, meta) => winston.debug(msg, meta),
+});
+```
+
+---
+
 ## 🧪 Testing
 
 The project maintains high code coverage (>94%) using Jest.
@@ -164,6 +188,8 @@ npx ts-node scripts/manual-test-edenai.ts
 ```
 
 ## 🤝 Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 Contributions are welcome! Please ensure:
 1.  **Tests:** Add tests for new features.

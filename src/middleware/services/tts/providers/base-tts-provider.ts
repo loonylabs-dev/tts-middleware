@@ -13,6 +13,7 @@ import type {
   TTSResponse,
   TTSErrorCode,
 } from '../types';
+import { log as logUtil } from '../utils/logger.utils';
 
 /**
  * Base error class for all TTS errors
@@ -332,25 +333,36 @@ export abstract class BaseTTSProvider {
   }
 
   /**
-   * Log a message (can be overridden by subclasses)
+   * Log a message using the pluggable logger
    *
    * @protected
    * @param level - Log level
    * @param message - Log message
    * @param meta - Optional metadata
+   *
+   * @description Uses the global TTS logger which can be customized via setLogger().
+   * By default uses console logging, but can be replaced with any logger (Winston, Pino, etc.)
+   *
+   * @example
+   * ```typescript
+   * // In application code:
+   * import { setLogger, silentLogger } from '@loonylabs/tts-middleware';
+   *
+   * // Disable all logging
+   * setLogger(silentLogger);
+   *
+   * // Use custom logger
+   * setLogger({
+   *   info: (msg, meta) => myLogger.info(msg, meta),
+   *   // ...
+   * });
+   * ```
    */
   protected log(
     level: 'info' | 'warn' | 'error' | 'debug',
     message: string,
     meta?: Record<string, unknown>
   ): void {
-    const timestamp = new Date().toISOString();
-    const prefix = `[${timestamp}] [${this.providerName.toUpperCase()}] [${level.toUpperCase()}]`;
-
-    if (meta) {
-      console[level](prefix, message, meta);
-    } else {
-      console[level](prefix, message);
-    }
+    logUtil(this.providerName, level, message, meta);
   }
 }

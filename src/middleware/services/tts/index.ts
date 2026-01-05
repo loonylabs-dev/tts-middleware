@@ -83,3 +83,15 @@ export {
   estimateAudioDuration,
   formatCharacterCount,
 } from './utils';
+
+// ===== Logger =====
+export {
+  setLogger,
+  getLogger,
+  resetLogger,
+  setLogLevel,
+  getLogLevel,
+  silentLogger,
+} from './utils';
+
+export type { TTSLogger, LogLevel } from './utils';
