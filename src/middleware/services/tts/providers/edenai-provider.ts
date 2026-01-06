@@ -182,63 +182,62 @@ export class EdenAIProvider extends BaseTTSProvider {
    *
    * @private
    * @param text - The input text
-   * @param voiceId - The voice identifier
+   * @param voiceId - The voice identifier (language code like 'en', 'de', 'en-US')
    * @param request - The synthesis request
    * @param options - EdenAI-specific options
    * @returns Request payload for EdenAI API
+   *
+   * @see https://docs.edenai.co/reference/audio_text_to_speech_create
+   *
+   * EdenAI API expects:
+   * - text: The content to convert
+   * - language: Language code (e.g., 'en', 'de', 'en-US')
+   * - providers: Provider name at TOP LEVEL (e.g., 'openai', 'google')
+   * - settings: Optional model-specific config (e.g., { "model": "Neural" })
+   * - option: Optional specific voice name (provider-dependent)
    */
   private buildEdenAIRequest(
     text: string,
     voiceId: string,
-    request: TTSSynthesizeRequest,
+    _request: TTSSynthesizeRequest,
     options: EdenAIProviderOptions
   ): Record<string, unknown> {
     // Extract language from voice ID (e.g., 'en-US-JennyNeural' -> 'en-US', 'en-US' -> 'en-US')
     const language = this.extractLanguage(voiceId);
 
-    // Base request
+    // Base request - minimal required fields
+    // See: https://docs.edenai.co/reference/audio_text_to_speech_create
     const edenaiRequest: Record<string, unknown> = {
       text,
       language,
-      option: voiceId, // Use voiceId as option for voice selection
-      providers: options.provider || 'google', // Top-level providers field
+      providers: options.provider || 'google', // Provider at top level
     };
 
-    // Build settings object for provider-specific options
+    // Handle 'option' field - EdenAI uses this for voice selection
+    // Valid values depend on provider but typically include: FEMALE, MALE, or specific voice names
+    // If voiceId is just a language code (e.g., 'en', 'de'), default to FEMALE
+    // If voiceId looks like a specific voice name (longer than 5 chars, not a language code), use it
+    if (voiceId !== language && voiceId.length > 5) {
+      // voiceId is a specific voice name like 'en-US-JennyNeural'
+      edenaiRequest.option = voiceId;
+    } else if (options.option) {
+      // Use explicitly provided option (e.g., 'FEMALE', 'MALE')
+      edenaiRequest.option = options.option;
+    } else {
+      // Default to FEMALE for language-only voice IDs
+      edenaiRequest.option = 'FEMALE';
+    }
+
+    // Build settings object for model-specific options only
+    // Note: EdenAI settings format is { "model": "Neural" } style, NOT speaking_rate etc.
     const settings: Record<string, unknown> = {};
 
-    // Speaking rate (maps to speed)
-    const speakingRate = options.speaking_rate ?? request.audio?.speed;
-    if (speakingRate !== undefined) {
-      settings.speaking_rate = speakingRate;
+    // Model selection (e.g., "Neural", "Standard", "Wavenet")
+    if (options.model) {
+      settings.model = options.model;
     }
 
-    // Speaking pitch
-    if (options.speaking_pitch !== undefined) {
-      settings.speaking_pitch = options.speaking_pitch;
-    }
-
-    // Speaking volume
-    if (options.speaking_volume !== undefined) {
-      settings.speaking_volume = options.speaking_volume;
-    }
-
-    // Audio format
-    if (options.audio_format !== undefined) {
-      settings.audio_format = options.audio_format;
-    }
-
-    // Sampling rate
-    if (options.sampling_rate !== undefined) {
-      settings.sampling_rate = options.sampling_rate;
-    }
-
-    // Add providers to settings if provider is explicitly specified
-    if (options.provider) {
-      settings.providers = options.provider;
-    }
-
-    // Add settings to request if any settings were specified
+    // Add settings to request only if model is specified
     if (Object.keys(settings).length > 0) {
       edenaiRequest.settings = settings;
     }

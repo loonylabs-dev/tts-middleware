@@ -375,6 +375,25 @@ export interface EdenAIProviderOptions {
     | 'elevenlabs';
 
   /**
+   * Model/quality tier to use
+   *
+   * @description Provider-specific model selection (e.g., 'Neural', 'Standard', 'Wavenet')
+   *
+   * @example 'Neural'
+   */
+  model?: string;
+
+  /**
+   * Voice option/gender
+   *
+   * @description Voice selection for EdenAI. Common values: 'FEMALE', 'MALE', or provider-specific voice IDs.
+   * If not specified and voice.id is just a language code, defaults to 'FEMALE'.
+   *
+   * @example 'FEMALE'
+   */
+  option?: string;
+
+  /**
    * Speaking rate multiplier
    *
    * @description Controls the speed of speech synthesis
