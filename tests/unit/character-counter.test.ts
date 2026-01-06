@@ -12,7 +12,7 @@ import {
   countBillableCharacters,
   estimateAudioDuration,
   formatCharacterCount,
-} from '../utils/character-counter.utils';
+} from '../../src/middleware/services/tts/utils/character-counter.utils';
 
 describe('countCharacters', () => {
   describe('Basic text', () => {

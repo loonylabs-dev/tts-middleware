@@ -5,12 +5,12 @@
  * @coverage Target: 85%
  */
 
-import { TTSService, ttsService } from '../tts.service';
-import type { TTSSynthesizeRequest } from '../types';
-import { TTSProvider } from '../types';
+import { TTSService, ttsService } from '../../src/middleware/services/tts/tts.service';
+import type { TTSSynthesizeRequest } from '../../src/middleware/services/tts/types';
+import { TTSProvider } from '../../src/middleware/services/tts/types';
 
 // Mock the Azure provider
-jest.mock('../providers/azure-provider', () => {
+jest.mock('../../src/middleware/services/tts/providers/azure-provider', () => {
   return {
     AzureProvider: jest.fn().mockImplementation(() => ({
       synthesize: jest.fn().mockResolvedValue({

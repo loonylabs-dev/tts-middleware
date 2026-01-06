@@ -37,7 +37,7 @@ import {
   countBillableCharacters,
   estimateAudioDuration,
   formatCharacterCount,
-} from '../index';
+} from '../../src';
 
 // Type-only imports
 import type {
@@ -56,7 +56,7 @@ import type {
   GoogleCloudProviderOptions,
   DeepgramProviderOptions,
   ProviderOptions,
-} from '../index';
+} from '../../src';
 
 describe('Public API Exports', () => {
   describe('Main Service Exports', () => {
@@ -418,7 +418,7 @@ describe('Public API Exports', () => {
 
   describe('Namespace Imports', () => {
     test('can import all exports as namespace', async () => {
-      const TTS = await import('../index');
+      const TTS = await import('../../src');
 
       // Services
       expect(TTS.TTSService).toBeDefined();

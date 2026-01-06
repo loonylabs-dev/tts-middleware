@@ -5,8 +5,8 @@
  * @coverage Target: 90%
  */
 
-import type { TTSSynthesizeRequest, TTSResponse } from '../types';
-import { TTSProvider } from '../types';
+import type { TTSSynthesizeRequest, TTSResponse } from '../../src/middleware/services/tts/types';
+import { TTSProvider } from '../../src/middleware/services/tts/types';
 import {
   BaseTTSProvider,
   TTSError,
@@ -16,7 +16,7 @@ import {
   ProviderUnavailableError,
   SynthesisFailedError,
   NetworkError,
-} from '../providers/base-tts-provider';
+} from '../../src/middleware/services/tts/providers/base-tts-provider';
 
 /**
  * Mock implementation of BaseTTSProvider for testing

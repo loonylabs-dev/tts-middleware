@@ -15,7 +15,7 @@ import type {
   ElevenLabsProviderOptions,
   GoogleCloudProviderOptions,
   DeepgramProviderOptions,
-} from '../types';
+} from '../../src/middleware/services/tts/types';
 
 import {
   TTSProvider,
@@ -25,7 +25,7 @@ import {
   isElevenLabsOptions,
   isGoogleCloudOptions,
   isDeepgramOptions,
-} from '../types';
+} from '../../src/middleware/services/tts/types';
 
 describe('TTSProvider enum', () => {
   test('has all expected provider values', () => {

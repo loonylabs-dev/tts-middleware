@@ -5,10 +5,10 @@
  * @coverage Target: >90%
  */
 
-import type { TTSSynthesizeRequest } from '../types';
-import { TTSProvider } from '../types';
-import { EdenAIProvider } from '../providers/edenai-provider';
-import { InvalidConfigError } from '../providers/base-tts-provider';
+import type { TTSSynthesizeRequest } from '../../src/middleware/services/tts/types';
+import { TTSProvider } from '../../src/middleware/services/tts/types';
+import { EdenAIProvider } from '../../src/middleware/services/tts/providers/edenai-provider';
+import { InvalidConfigError } from '../../src/middleware/services/tts/providers/base-tts-provider';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -128,7 +128,31 @@ describe('EdenAIProvider', () => {
 
       expect(requestBody.text).toBe('Hello World');
       expect(requestBody.language).toBe('en-US');
-      expect(requestBody.option).toBe('en-US');
+      // Option always defaults to FEMALE (EdenAI requires this field)
+      expect(requestBody.option).toBe('FEMALE');
+      // Providers defaults to google
+      expect(requestBody.providers).toBe('google');
+    });
+
+    test('uses voiceId for language extraction but always defaults option to FEMALE', async () => {
+      const provider = new EdenAIProvider();
+
+      // Azure-style voice IDs are NOT valid for EdenAI option field
+      // They should extract language but use FEMALE as option
+      const request: TTSSynthesizeRequest = {
+        text: 'Test',
+        voice: { id: 'en-US-JennyNeural' },
+      };
+
+      await provider.synthesize('Test', 'en-US-JennyNeural', request);
+
+      const fetchCall = (fetch as jest.Mock).mock.calls[0];
+      const requestBody = JSON.parse(fetchCall[1].body);
+
+      // Language extracted correctly
+      expect(requestBody.language).toBe('en-US');
+      // But option is always FEMALE (not the Azure voice ID)
+      expect(requestBody.option).toBe('FEMALE');
     });
 
     test('validates config before synthesis', async () => {
@@ -146,7 +170,7 @@ describe('EdenAIProvider', () => {
   });
 
   describe('API Request Building', () => {
-    test('includes provider selection in request', async () => {
+    test('includes provider selection at top level (not in settings)', async () => {
       const provider = new EdenAIProvider();
 
       const request: TTSSynthesizeRequest = {
@@ -162,17 +186,40 @@ describe('EdenAIProvider', () => {
       const fetchCall = (fetch as jest.Mock).mock.calls[0];
       const requestBody = JSON.parse(fetchCall[1].body);
 
-      expect(requestBody.settings.providers).toBe('google');
+      // Provider must be at top level, NOT in settings
+      expect(requestBody.providers).toBe('google');
+      expect(requestBody.settings?.providers).toBeUndefined();
     });
 
-    test('includes speaking_rate in request', async () => {
+    test('includes option field with FEMALE default for language codes', async () => {
+      const provider = new EdenAIProvider();
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Test',
+        voice: { id: 'de' }, // Simple language code
+        providerOptions: {
+          provider: 'openai',
+        },
+      };
+
+      await provider.synthesize('Test', 'de', request);
+
+      const fetchCall = (fetch as jest.Mock).mock.calls[0];
+      const requestBody = JSON.parse(fetchCall[1].body);
+
+      // Option defaults to FEMALE for language-only voice IDs
+      expect(requestBody.option).toBe('FEMALE');
+    });
+
+    test('includes explicit option when provided', async () => {
       const provider = new EdenAIProvider();
 
       const request: TTSSynthesizeRequest = {
         text: 'Test',
         voice: { id: 'en-US' },
         providerOptions: {
-          speaking_rate: 1.5,
+          provider: 'google',
+          option: 'MALE',
         },
       };
 
@@ -181,17 +228,18 @@ describe('EdenAIProvider', () => {
       const fetchCall = (fetch as jest.Mock).mock.calls[0];
       const requestBody = JSON.parse(fetchCall[1].body);
 
-      expect(requestBody.settings.speaking_rate).toBe(1.5);
+      expect(requestBody.option).toBe('MALE');
     });
 
-    test('includes speaking_pitch in request', async () => {
+    test('includes model in settings when provided', async () => {
       const provider = new EdenAIProvider();
 
       const request: TTSSynthesizeRequest = {
         text: 'Test',
         voice: { id: 'en-US' },
         providerOptions: {
-          speaking_pitch: 5.0,
+          provider: 'google',
+          model: 'Neural',
         },
       };
 
@@ -200,17 +248,17 @@ describe('EdenAIProvider', () => {
       const fetchCall = (fetch as jest.Mock).mock.calls[0];
       const requestBody = JSON.parse(fetchCall[1].body);
 
-      expect(requestBody.settings.speaking_pitch).toBe(5.0);
+      expect(requestBody.settings?.model).toBe('Neural');
     });
 
-    test('includes speaking_volume in request', async () => {
+    test('does not include settings when no model specified', async () => {
       const provider = new EdenAIProvider();
 
       const request: TTSSynthesizeRequest = {
         text: 'Test',
         voice: { id: 'en-US' },
         providerOptions: {
-          speaking_volume: -10.0,
+          provider: 'google',
         },
       };
 
@@ -219,65 +267,14 @@ describe('EdenAIProvider', () => {
       const fetchCall = (fetch as jest.Mock).mock.calls[0];
       const requestBody = JSON.parse(fetchCall[1].body);
 
-      expect(requestBody.settings.speaking_volume).toBe(-10.0);
+      // Settings should be undefined if no model is specified
+      expect(requestBody.settings).toBeUndefined();
     });
 
-    test('includes audio_format in request', async () => {
-      const provider = new EdenAIProvider();
-
-      const request: TTSSynthesizeRequest = {
-        text: 'Test',
-        voice: { id: 'en-US' },
-        providerOptions: {
-          audio_format: 'wav',
-        },
-      };
-
-      await provider.synthesize('Test', 'en-US', request);
-
-      const fetchCall = (fetch as jest.Mock).mock.calls[0];
-      const requestBody = JSON.parse(fetchCall[1].body);
-
-      expect(requestBody.settings.audio_format).toBe('wav');
-    });
-
-    test('includes sampling_rate in request', async () => {
-      const provider = new EdenAIProvider();
-
-      const request: TTSSynthesizeRequest = {
-        text: 'Test',
-        voice: { id: 'en-US' },
-        providerOptions: {
-          sampling_rate: 48000,
-        },
-      };
-
-      await provider.synthesize('Test', 'en-US', request);
-
-      const fetchCall = (fetch as jest.Mock).mock.calls[0];
-      const requestBody = JSON.parse(fetchCall[1].body);
-
-      expect(requestBody.settings.sampling_rate).toBe(48000);
-    });
-
-    test('uses audio.speed as speaking_rate if no speaking_rate provided', async () => {
-      const provider = new EdenAIProvider();
-
-      const request: TTSSynthesizeRequest = {
-        text: 'Test',
-        voice: { id: 'en-US' },
-        audio: {
-          speed: 1.2,
-        },
-      };
-
-      await provider.synthesize('Test', 'en-US', request);
-
-      const fetchCall = (fetch as jest.Mock).mock.calls[0];
-      const requestBody = JSON.parse(fetchCall[1].body);
-
-      expect(requestBody.settings.speaking_rate).toBe(1.2);
-    });
+    // NOTE: speaking_rate, speaking_pitch, speaking_volume, audio_format, sampling_rate
+    // are NOT supported by EdenAI API in the settings object.
+    // These tests were removed as part of the fix for the EdenAI API format.
+    // See: https://docs.edenai.co/reference/audio_text_to_speech_create
 
     test('includes fallback_providers in request', async () => {
       const provider = new EdenAIProvider();

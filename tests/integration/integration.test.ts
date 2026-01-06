@@ -5,10 +5,10 @@
  * @coverage Target: 100% critical paths
  */
 
-import { ttsService, TTSService } from '../tts.service';
-import { TTSProvider } from '../types';
-import type { TTSSynthesizeRequest } from '../types';
-import { SynthesisFailedError } from '../providers/base-tts-provider';
+import { ttsService, TTSService } from '../../src/middleware/services/tts/tts.service';
+import { TTSProvider } from '../../src/middleware/services/tts/types';
+import type { TTSSynthesizeRequest } from '../../src/middleware/services/tts/types';
+import { SynthesisFailedError } from '../../src/middleware/services/tts/providers/base-tts-provider';
 
 // Mock the Azure SDK for integration tests
 jest.mock('microsoft-cognitiveservices-speech-sdk', () => {

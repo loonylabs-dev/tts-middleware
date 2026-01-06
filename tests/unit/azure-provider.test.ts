@@ -5,14 +5,14 @@
  * @coverage Target: 85%
  */
 
-import type { TTSSynthesizeRequest } from '../types';
-import { TTSProvider } from '../types';
-import { AzureProvider } from '../providers/azure-provider';
+import type { TTSSynthesizeRequest } from '../../src/middleware/services/tts/types';
+import { TTSProvider } from '../../src/middleware/services/tts/types';
+import { AzureProvider } from '../../src/middleware/services/tts/providers/azure-provider';
 import {
   InvalidConfigError,
   InvalidVoiceError,
   SynthesisFailedError,
-} from '../providers/base-tts-provider';
+} from '../../src/middleware/services/tts/providers/base-tts-provider';
 
 // Mock the Azure SDK
 jest.mock('microsoft-cognitiveservices-speech-sdk', () => {

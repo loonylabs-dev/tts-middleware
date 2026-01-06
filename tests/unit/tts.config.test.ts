@@ -5,7 +5,7 @@
  * @coverage Target: >80%
  */
 
-import { TTSProvider } from '../../../services/tts/types';
+import { TTSProvider } from '../../src/middleware/services/tts/types';
 
 describe('TTS Configuration', () => {
   // Store original environment
@@ -32,7 +32,7 @@ describe('TTS Configuration', () => {
       process.env.TTS_DEBUG = 'true';
 
       // Import after setting env vars
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.AZURE.KEY).toBe('test-key-123');
@@ -48,7 +48,7 @@ describe('TTS Configuration', () => {
       delete process.env.TTS_DEFAULT_PROVIDER;
       delete process.env.TTS_DEBUG;
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.AZURE.KEY).toBe('');
@@ -63,7 +63,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_ENDPOINT =
         'https://custom.tts.speech.microsoft.com';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.AZURE.ENDPOINT).toBe(
@@ -86,7 +86,7 @@ describe('TTS Configuration', () => {
         process.env.AZURE_SPEECH_KEY = 'test-key';
         process.env.AZURE_SPEECH_REGION = region;
 
-        const { getTTSConfig } = require('../tts.config');
+        const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
         const config = getTTSConfig();
 
         expect(config.AZURE.DSGVO_COMPLIANT).toBe(true);
@@ -101,7 +101,7 @@ describe('TTS Configuration', () => {
         process.env.AZURE_SPEECH_KEY = 'test-key';
         process.env.AZURE_SPEECH_REGION = region;
 
-        const { getTTSConfig } = require('../tts.config');
+        const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
         const config = getTTSConfig();
 
         expect(config.AZURE.DSGVO_COMPLIANT).toBe(false);
@@ -112,7 +112,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'test-key';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.MAX_TEXT_LENGTH).toBe(3000);
@@ -128,7 +128,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'germanywestcentral';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(() => validateTTSConfig(config)).not.toThrow();
@@ -139,7 +139,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'westus';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(() => validateTTSConfig(config)).toThrow(
@@ -152,7 +152,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = '';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       // Should use default region and pass validation
@@ -165,7 +165,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'west us';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(() => validateTTSConfig(config)).toThrow(
@@ -178,7 +178,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'westus';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(() => validateTTSConfig(config)).toThrow(
@@ -192,7 +192,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_ENDPOINT = 'http://insecure.endpoint.com';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(() => validateTTSConfig(config)).toThrow(
@@ -206,7 +206,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_ENDPOINT = 'https://secure.endpoint.com';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(() => validateTTSConfig(config)).not.toThrow();
@@ -216,7 +216,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'testkey123';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
       config.DEFAULT_PROVIDER = 'invalid-provider' as TTSProvider;
 
@@ -230,7 +230,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'westus';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
       config.MAX_TEXT_LENGTH = 0;
 
@@ -244,7 +244,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'westus';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
       config.DEFAULT_SAMPLE_RATE = -1;
 
@@ -258,7 +258,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = '';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { getTTSConfig, validateTTSConfig } = require('../tts.config');
+      const { getTTSConfig, validateTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       // Should use default region but fail on missing key
@@ -273,7 +273,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'westus';
       process.env.TTS_DEFAULT_PROVIDER = 'azure';
 
-      const { TTS_CONFIG } = require('../tts.config');
+      const { TTS_CONFIG } = require('../../src/middleware/shared/config/tts.config');
 
       expect(TTS_CONFIG).toBeDefined();
       expect(TTS_CONFIG.AZURE.KEY).toBe('singleton-test-key');
@@ -289,7 +289,7 @@ describe('TTS Configuration', () => {
 
       // Should not throw in test environment even with invalid config
       expect(() => {
-        require('../tts.config');
+        require('../../src/middleware/shared/config/tts.config');
       }).not.toThrow();
     });
   });
@@ -300,7 +300,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'test';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.DEBUG).toBe(true);
@@ -311,7 +311,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'test';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.DEBUG).toBe(false);
@@ -322,7 +322,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'test';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.DEBUG).toBe(false);
@@ -343,7 +343,7 @@ describe('TTS Configuration', () => {
         process.env.AZURE_SPEECH_KEY = 'test';
         process.env.AZURE_SPEECH_REGION = 'westus';
 
-        const { getTTSConfig } = require('../tts.config');
+        const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
         const config = getTTSConfig();
 
         expect(config.DEFAULT_PROVIDER).toBe(provider);
@@ -356,7 +356,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'test';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.AZURE.FREE_TIER_CHARS_PER_MONTH).toBe(500_000);
@@ -367,7 +367,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_REGION = 'westus';
       delete process.env.AZURE_SPEECH_ENDPOINT;
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       expect(config.AZURE.ENDPOINT).toBeUndefined();
@@ -385,7 +385,7 @@ describe('TTS Configuration', () => {
         process.env.AZURE_SPEECH_KEY = 'test';
         process.env.AZURE_SPEECH_REGION = region;
 
-        const { getTTSConfig } = require('../tts.config');
+        const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
         const config = getTTSConfig();
 
         expect(config.AZURE.DSGVO_COMPLIANT).toBe(true);
@@ -398,7 +398,7 @@ describe('TTS Configuration', () => {
       process.env.AZURE_SPEECH_KEY = 'test';
       process.env.AZURE_SPEECH_REGION = 'westus';
 
-      const { getTTSConfig } = require('../tts.config');
+      const { getTTSConfig } = require('../../src/middleware/shared/config/tts.config');
       const config = getTTSConfig();
 
       // Top-level properties

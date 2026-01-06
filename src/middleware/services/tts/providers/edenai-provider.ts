@@ -214,17 +214,13 @@ export class EdenAIProvider extends BaseTTSProvider {
     };
 
     // Handle 'option' field - EdenAI uses this for voice selection
-    // Valid values depend on provider but typically include: FEMALE, MALE, or specific voice names
-    // If voiceId is just a language code (e.g., 'en', 'de'), default to FEMALE
-    // If voiceId looks like a specific voice name (longer than 5 chars, not a language code), use it
-    if (voiceId !== language && voiceId.length > 5) {
-      // voiceId is a specific voice name like 'en-US-JennyNeural'
-      edenaiRequest.option = voiceId;
-    } else if (options.option) {
+    // Valid values: 'FEMALE', 'MALE', or provider-specific voice names (NOT Azure-style IDs)
+    // Note: Azure-style voice IDs like 'en-US-JennyNeural' are NOT valid for EdenAI
+    if (options.option) {
       // Use explicitly provided option (e.g., 'FEMALE', 'MALE')
       edenaiRequest.option = options.option;
     } else {
-      // Default to FEMALE for language-only voice IDs
+      // Default to FEMALE - EdenAI requires this field
       edenaiRequest.option = 'FEMALE';
     }
 

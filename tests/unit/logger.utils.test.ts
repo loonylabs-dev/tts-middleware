@@ -13,7 +13,7 @@ import {
   silentLogger,
   log,
   TTSLogger,
-} from '../logger.utils';
+} from '../../src/middleware/services/tts/utils/logger.utils';
 
 describe('Logger Utils', () => {
   // Store original console methods
