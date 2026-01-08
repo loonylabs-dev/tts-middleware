@@ -1,6 +1,6 @@
 {
   "name": "@loonylabs/tts-middleware",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Provider-agnostic Text-to-Speech middleware for Azure, OpenAI, ElevenLabs, Google Cloud, and Deepgram",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

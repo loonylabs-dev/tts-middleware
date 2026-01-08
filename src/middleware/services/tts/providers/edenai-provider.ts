@@ -224,18 +224,15 @@ export class EdenAIProvider extends BaseTTSProvider {
       edenaiRequest.option = 'FEMALE';
     }
 
-    // Build settings object for model-specific options only
-    // Note: EdenAI settings format is { "model": "Neural" } style, NOT speaking_rate etc.
-    const settings: Record<string, unknown> = {};
-
-    // Model selection (e.g., "Neural", "Standard", "Wavenet")
-    if (options.model) {
-      settings.model = options.model;
-    }
-
-    // Add settings to request only if model is specified
-    if (Object.keys(settings).length > 0) {
-      edenaiRequest.settings = settings;
+    // Build settings object for provider-specific model/voice selection
+    // Format: { "provider_name": "model_or_voice_id" }
+    // Example: { "openai": "de_nova" } or { "google": "Neural" }
+    if (options.settings) {
+      edenaiRequest.settings = options.settings;
+    } else if (options.model) {
+      // Legacy: if model is specified without settings, build settings object
+      const providerName = (options.provider || 'google').split('/')[0];
+      edenaiRequest.settings = { [providerName]: options.model };
     }
 
     // Fallback providers (top-level)

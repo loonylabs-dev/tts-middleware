@@ -47,14 +47,46 @@ These parameters are passed via `providerOptions: Record<string, unknown>` in th
 
 ---
 
-### OpenAI TTS (🔮 Future)
+### EdenAI (✅ Stable)
+
+EdenAI is a multi-provider aggregator. Use `settings` to configure provider-specific options.
+
+| Parameter | Status | Type | Range/Options | Description |
+|-----------|--------|------|---------------|-------------|
+| **provider** | ✅ Stable | string | 'google', 'openai', 'amazon', 'ibm', 'microsoft', 'elevenlabs' | Underlying TTS provider |
+| **settings** | ✅ Stable | object | `{ openai: 'de_nova' }` | Provider-specific voice/model selection |
+| **option** | ✅ Stable | string | 'FEMALE', 'MALE' | Gender option (fallback) |
+| **model** | ⚠️ Deprecated | string | 'Neural', 'Standard' | Use `settings` instead |
+
+**Implementation Status**: Stable
+**Billing Model**: Varies by underlying provider
+**Free Tier**: Trial credits available
+
+#### OpenAI Voices via EdenAI
+
+Format: `{language_code}_{voice_name}` (e.g., `de_nova`, `en_alloy`)
+
+| Voice | Character | Example (German) | Example (English) |
+|-------|-----------|------------------|-------------------|
+| `alloy` | Neutral | `de_alloy` | `en_alloy` |
+| `echo` | Male | `de_echo` | `en_echo` |
+| `fable` | Expressive | `de_fable` | `en_fable` |
+| `onyx` | Male, deep | `de_onyx` | `en_onyx` |
+| `nova` | Female | `de_nova` | `en_nova` |
+| `shimmer` | Female, warm | `de_shimmer` | `en_shimmer` |
+
+**Supported Languages (57):** af, ar, az, be, bg, bs, ca, cs, cy, da, de, el, en, es, et, fa, fi, fr, gl, he, hi, hr, hu, hy, id, is, it, ja, kk, kn, ko, lt, lv, mi, mk, mr, ms, ne, nl, no, pl, pt, ro, ru, sk, sl, sr, sv, sw, ta, th, tl, tr, uk, ur, vi, zh
+
+---
+
+### OpenAI TTS (🔮 Future - Direct API)
 
 | Parameter | Status | Type | Range/Options | Description |
 |-----------|--------|------|---------------|-------------|
 | **model** | 🔮 Future | string | 'tts-1', 'tts-1-hd', 'gpt-4o-mini-tts' | TTS model selection |
 | **responseFormat** | 🔮 Future | string | 'mp3', 'opus', 'aac', 'flac' | Output format override |
 
-**Implementation Status**: Not implemented (types ready)
+**Implementation Status**: Not implemented (use EdenAI for OpenAI access)
 **Billing Model**: Character-based (~$15 per 1M characters) OR Token-based (gpt-4o-mini-tts)
 **Free Tier**: None
 **EU Compliance**: ⚠️ (available but US default)
@@ -306,6 +338,6 @@ const costUSD = response.billing.characters * PROVIDER_RATES[provider];
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-12-31
-**Status**: MVP (Azure only) - Types ready for all providers
+**Document Version**: 1.1
+**Last Updated**: 2026-01-08
+**Status**: Azure + EdenAI stable - Types ready for all providers

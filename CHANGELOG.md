@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-08
+
+### Added
+- **EdenAI OpenAI Voice Selection:** Support for specific OpenAI voice selection via EdenAI
+  - New `settings` field in `EdenAIProviderOptions` for provider-specific voice/model selection
+  - Format: `settings: { openai: 'de_nova' }` to select specific voices
+  - Supports all 6 OpenAI voices: `alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`
+  - Supports all 57 languages via language prefix (e.g., `de_nova`, `en_alloy`, `fr_shimmer`)
+
+### Changed
+- **EdenAI Provider:** Updated request building to use `settings` object for voice selection
+  - `settings` field now correctly passed to EdenAI API for provider-specific configuration
+  - `model` field deprecated in favor of `settings` (still works for backwards compatibility)
+
+### Documentation
+- Updated README with EdenAI + OpenAI voice selection examples
+- Updated PROVIDER_PARAMETERS.md with EdenAI settings documentation
+
 ## [0.2.0] - 2026-01-06
 
 ### Fixed

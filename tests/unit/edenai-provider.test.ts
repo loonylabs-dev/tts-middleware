@@ -248,7 +248,8 @@ describe('EdenAIProvider', () => {
       const fetchCall = (fetch as jest.Mock).mock.calls[0];
       const requestBody = JSON.parse(fetchCall[1].body);
 
-      expect(requestBody.settings?.model).toBe('Neural');
+      // Legacy model is converted to settings format: { provider: model }
+      expect(requestBody.settings?.google).toBe('Neural');
     });
 
     test('does not include settings when no model specified', async () => {

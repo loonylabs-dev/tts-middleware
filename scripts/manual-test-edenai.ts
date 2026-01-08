@@ -38,10 +38,19 @@ function loadEnv() {
 }
 
 async function runSynthesisTest(
-  testName: string, 
-  params: TTSSynthesizeRequest, 
+  testName: string,
+  params: TTSSynthesizeRequest,
   filename: string
 ) {
+  const outputDir = path.join(__dirname, '../output');
+  const outputPath = path.join(outputDir, filename);
+
+  // Skip if file already exists
+  if (fs.existsSync(outputPath)) {
+    console.log(`\n--- Skipping: ${testName} (file exists: ${filename}) ---`);
+    return;
+  }
+
   // Dynamically import ttsService to ensure env vars are loaded first
   const { ttsService } = await import('../src/middleware/services/tts/tts.service');
 
@@ -51,7 +60,6 @@ async function runSynthesisTest(
   console.log(`Provider: ${params.providerOptions?.provider || 'auto'}`);
 
   try {
-    const outputDir = path.join(__dirname, '../output');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir);
     }
@@ -60,7 +68,6 @@ async function runSynthesisTest(
     const response = await ttsService.synthesize(params);
     const duration = Date.now() - startTime;
 
-    const outputPath = path.join(outputDir, filename);
     fs.writeFileSync(outputPath, response.audio);
 
     console.log(`✅ Success!`);
@@ -109,20 +116,30 @@ async function main() {
     );
   }
 
-  // 3. Run German Test (OpenAI)
-  // Using 'de' as OpenAI often prefers generic codes via EdenAI
+  // 3. Run German Tests (OpenAI) - All 6 voices
   if (runDe) {
-    await runSynthesisTest(
-      'German (OpenAI)',
-      {
-        text: 'Die warme Herbstsonne tauchte den Goldähren-Hof in ein flüssiges Gold, das fast so hell strahlte wie Tims Vorfreude. Er schnupperte tief und sog den süßen Duft von frisch gebackenem Apfelkuchen und den staubigen Geruch von trockenem Heu ein. „Heute klappt alles, ganz sicher“, murmelte Tim und strich sich über den samtenen Stoff seines blauen Zauberermantels. Er rückte den spitzen Hut zurecht, der ihm immer ein wenig zu tief in die Stirn rutschte. In seiner Tasche begann sein Zauberstab ungeduldig zu kribbeln und zu vibrieren, als könnte er die Elektrizität in der Luft spüren. „Ganz ruhig, Kleiner“, flüsterte er und klopfte sanft auf das glatte Holz, „dein großer Auftritt kommt noch.“',
-        provider: TTSProvider.EDENAI,
-        voice: { id: 'de' }, 
-        audio: { speed: 1.0, format: 'mp3' },
-        providerOptions: { provider: 'openai' }
-      },
-      'edenai-de-openai.mp3'
-    );
+    const voices = [
+      { name: 'alloy', desc: 'neutral' },
+      { name: 'echo', desc: 'male' },
+      { name: 'fable', desc: 'expressive' },
+      { name: 'onyx', desc: 'male-deep' },
+      { name: 'nova', desc: 'female' },
+      { name: 'shimmer', desc: 'female-warm' },
+    ];
+
+    for (const voice of voices) {
+      await runSynthesisTest(
+        `German (OpenAI - ${voice.name})`,
+        {
+          text: 'Die warme Herbstsonne tauchte den Goldähren-Hof in ein flüssiges Gold, das fast so hell strahlte wie Tims Vorfreude.',
+          provider: TTSProvider.EDENAI,
+          voice: { id: 'de' },
+          audio: { speed: 1.0, format: 'mp3' },
+          providerOptions: { provider: 'openai', settings: { openai: `de_${voice.name}` } }
+        },
+        `edenai-de-openai-${voice.name}.mp3`
+      );
+    }
   }
 }
 

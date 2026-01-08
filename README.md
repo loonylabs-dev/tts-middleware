@@ -115,6 +115,46 @@ const response = await ttsService.synthesize({
 });
 ```
 
+### Using OpenAI Voices via EdenAI
+
+Access OpenAI's TTS voices (alloy, echo, fable, onyx, nova, shimmer) through EdenAI with specific voice selection:
+
+```typescript
+// German with OpenAI "nova" voice (female)
+const response = await ttsService.synthesize({
+  text: "Hallo Welt! Das ist ein Test.",
+  provider: TTSProvider.EDENAI,
+  voice: { id: "de" },  // Language code
+  providerOptions: {
+    provider: "openai",
+    settings: { openai: "de_nova" }  // Voice: {lang}_{voice}
+  }
+});
+
+// English with OpenAI "onyx" voice (male, deep)
+const response = await ttsService.synthesize({
+  text: "Hello World! This is a test.",
+  provider: TTSProvider.EDENAI,
+  voice: { id: "en" },
+  providerOptions: {
+    provider: "openai",
+    settings: { openai: "en_onyx" }
+  }
+});
+```
+
+**Available OpenAI Voices:**
+| Voice | Character |
+|-------|-----------|
+| `alloy` | Neutral |
+| `echo` | Male |
+| `fable` | Expressive |
+| `onyx` | Male, deep |
+| `nova` | Female |
+| `shimmer` | Female, warm |
+
+Format: `{language}_{voice}` (e.g., `de_nova`, `en_alloy`, `fr_shimmer`)
+
 ---
 
 ## 🏗️ Architecture

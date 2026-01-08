@@ -375,13 +375,25 @@ export interface EdenAIProviderOptions {
     | 'elevenlabs';
 
   /**
-   * Model/quality tier to use
+   * Model/quality tier to use (legacy)
    *
    * @description Provider-specific model selection (e.g., 'Neural', 'Standard', 'Wavenet')
+   * @deprecated Use `settings` instead for provider-specific voice/model selection
    *
    * @example 'Neural'
    */
   model?: string;
+
+  /**
+   * Provider-specific settings for model/voice selection
+   *
+   * @description Object mapping provider names to their model/voice IDs.
+   * This is the correct way to specify OpenAI voices via EdenAI.
+   *
+   * @example { "openai": "de_nova" }
+   * @example { "google": "Neural" }
+   */
+  settings?: Record<string, string>;
 
   /**
    * Voice option/gender
