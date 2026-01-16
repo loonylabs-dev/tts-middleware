@@ -207,19 +207,53 @@ export interface ElevenLabsProviderOptions {
 }
 
 /**
+ * Supported Google Cloud TTS regions for EU data residency
+ *
+ * @description Use EU regions for GDPR/CDPA compliance with data residency guarantees.
+ * The 'eu' region uses the EU multi-region endpoint (eu-texttospeech.googleapis.com).
+ *
+ * @see https://cloud.google.com/text-to-speech/docs/endpoints
+ */
+export type GoogleCloudTTSRegion =
+  | 'eu' // EU multi-region endpoint (recommended for DSGVO)
+  | 'europe-west1' // Belgium
+  | 'europe-west2' // London, UK
+  | 'europe-west3' // Frankfurt, Germany (recommended for DACH)
+  | 'europe-west4' // Netherlands
+  | 'europe-west6' // Zurich, Switzerland
+  | 'europe-west9' // Paris, France
+  | 'us-central1' // Iowa (NOT EU-compliant)
+  | 'global'; // Global endpoint (no data residency guarantee)
+
+/**
  * Google Cloud Text-to-Speech provider options
  *
- * @Future 🔮 Not implemented in MVP
  * @provider Google Cloud TTS
+ * @description Direct Google Cloud TTS integration with EU-regional endpoint support
+ * for GDPR/CDPA compliance. Uses Service Account authentication.
  *
  * @see https://cloud.google.com/text-to-speech/docs/reference/rest/v1/text/synthesize
  */
-export interface GoogleCloudProviderOptions {
+export interface GoogleCloudTTSProviderOptions {
+  /**
+   * Region for data residency (EU-compliance)
+   *
+   * @description Use 'eu' or specific EU regions (europe-west3, etc.) for DSGVO compliance.
+   * Data will be processed in the specified region without leaving it.
+   *
+   * @env GOOGLE_TTS_REGION
+   * @default 'eu' (EU multi-region endpoint)
+   *
+   * @example 'eu' - EU multi-region (recommended)
+   * @example 'europe-west3' - Frankfurt, Germany
+   */
+  region?: GoogleCloudTTSRegion;
+
   /**
    * Audio effects profile IDs
-   * @Future 🔮 Not implemented in MVP
    *
-   * @description Array of audio effect profile IDs to apply
+   * @description Array of audio effect profile IDs to apply.
+   * These optimize the audio for specific playback devices.
    *
    * @options
    * - 'wearable-class-device'
@@ -237,7 +271,6 @@ export interface GoogleCloudProviderOptions {
 
   /**
    * Pitch adjustment in semitones
-   * @Future 🔮 Not implemented in MVP
    *
    * @description Overrides the pitch parameter in AudioOptions if both are specified
    *
@@ -248,7 +281,6 @@ export interface GoogleCloudProviderOptions {
 
   /**
    * Speaking rate multiplier
-   * @Future 🔮 Not implemented in MVP
    *
    * @description Alternative to speed in AudioOptions
    *
@@ -259,7 +291,6 @@ export interface GoogleCloudProviderOptions {
 
   /**
    * Volume gain in dB
-   * @Future 🔮 Not implemented in MVP
    *
    * @description Alternative to volumeGainDb in AudioOptions
    *
@@ -268,6 +299,11 @@ export interface GoogleCloudProviderOptions {
    */
   volumeGainDb?: number;
 }
+
+/**
+ * @deprecated Use GoogleCloudTTSProviderOptions instead
+ */
+export type GoogleCloudProviderOptions = GoogleCloudTTSProviderOptions;
 
 /**
  * Deepgram TTS provider options
@@ -488,7 +524,7 @@ export type ProviderOptions =
   | AzureProviderOptions
   | OpenAIProviderOptions
   | ElevenLabsProviderOptions
-  | GoogleCloudProviderOptions
+  | GoogleCloudTTSProviderOptions
   | DeepgramProviderOptions
   | EdenAIProviderOptions;
 
@@ -533,17 +569,22 @@ export function isElevenLabsOptions(
 }
 
 /**
- * Type guard to check if options are for Google Cloud
+ * Type guard to check if options are for Google Cloud TTS
  */
-export function isGoogleCloudOptions(
+export function isGoogleCloudTTSOptions(
   options: unknown
-): options is GoogleCloudProviderOptions {
+): options is GoogleCloudTTSProviderOptions {
   return (
     typeof options === 'object' &&
     options !== null &&
-    ('effectsProfileId' in options || 'pitchSemitones' in options)
+    ('effectsProfileId' in options || 'pitchSemitones' in options || 'region' in options)
   );
 }
+
+/**
+ * @deprecated Use isGoogleCloudTTSOptions instead
+ */
+export const isGoogleCloudOptions = isGoogleCloudTTSOptions;
 
 /**
  * Type guard to check if options are for Deepgram

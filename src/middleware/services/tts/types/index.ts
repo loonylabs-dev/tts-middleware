@@ -29,7 +29,9 @@ export type {
   AzureProviderOptions,
   OpenAIProviderOptions,
   ElevenLabsProviderOptions,
-  GoogleCloudProviderOptions,
+  GoogleCloudTTSProviderOptions,
+  GoogleCloudProviderOptions, // deprecated alias
+  GoogleCloudTTSRegion,
   DeepgramProviderOptions,
   EdenAIProviderOptions,
   ProviderOptions,
@@ -39,7 +41,8 @@ export {
   isAzureOptions,
   isOpenAIOptions,
   isElevenLabsOptions,
-  isGoogleCloudOptions,
+  isGoogleCloudTTSOptions,
+  isGoogleCloudOptions, // deprecated alias
   isDeepgramOptions,
   isEdenAIOptions,
 } from './provider-options.types';
