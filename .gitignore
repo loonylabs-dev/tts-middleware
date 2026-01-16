@@ -46,4 +46,4 @@ output/
 *-credentials.json
 service-account*.json
 credentials/
-secrets/
+secrets/.claude/
