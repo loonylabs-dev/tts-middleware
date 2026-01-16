@@ -113,7 +113,12 @@ const AUDIO_ENCODING_MAP: Record<AudioFormat, GoogleAudioEncoding> = {
  */
 export class GoogleCloudTTSProvider extends BaseTTSProvider {
   private config: GoogleCloudTTSConfig;
-  private client: TextToSpeechClient | null = null;
+  /**
+   * Client cache per region - allows runtime region override via providerOptions
+   * Key: region string (e.g., 'eu', 'europe-west3')
+   * Value: TextToSpeechClient instance for that region
+   */
+  private clientsByRegion: Map<string, TextToSpeechClient> = new Map();
 
   /**
    * Creates a new Google Cloud TTS provider
@@ -171,14 +176,13 @@ export class GoogleCloudTTSProvider extends BaseTTSProvider {
   }
 
   /**
-   * Get the API endpoint based on region configuration
+   * Get the API endpoint for a specific region
    *
    * @private
+   * @param region - The region to get the endpoint for
    * @returns API endpoint URL
    */
-  private getApiEndpoint(): string {
-    const region = this.config.region || 'eu';
-
+  private getApiEndpoint(region: GoogleCloudTTSRegion): string {
     switch (region) {
       case 'eu':
         return 'eu-texttospeech.googleapis.com';
@@ -192,18 +196,30 @@ export class GoogleCloudTTSProvider extends BaseTTSProvider {
   }
 
   /**
-   * Initialize the Google Cloud TTS client lazily
+   * Get or create a Google Cloud TTS client for the specified region
    *
    * @private
-   * @returns Initialized TextToSpeechClient
+   * @param region - Optional region override (uses config.region if not specified)
+   * @returns Initialized TextToSpeechClient for the region
+   *
+   * @description Clients are cached per region to allow runtime region override
+   * via providerOptions while avoiding client recreation overhead.
    */
-  private async getClient(): Promise<TextToSpeechClient> {
-    if (this.client) {
-      return this.client;
+  private async getClient(region?: GoogleCloudTTSRegion): Promise<TextToSpeechClient> {
+    // Use provided region or fall back to config region
+    const effectiveRegion = region || this.config.region || 'eu';
+
+    // Check cache first
+    const cachedClient = this.clientsByRegion.get(effectiveRegion);
+    if (cachedClient) {
+      return cachedClient;
     }
 
     // Dynamic import to avoid loading SDK if not used
     const { TextToSpeechClient } = await import('@google-cloud/text-to-speech');
+
+    // Get endpoint for the specified region
+    const apiEndpoint = this.getApiEndpoint(effectiveRegion);
 
     const clientOptions: {
       apiEndpoint: string;
@@ -211,7 +227,7 @@ export class GoogleCloudTTSProvider extends BaseTTSProvider {
       keyFilename?: string;
       credentials?: { client_email: string; private_key: string };
     } = {
-      apiEndpoint: this.getApiEndpoint(),
+      apiEndpoint,
     };
 
     if (this.config.projectId) {
@@ -224,13 +240,17 @@ export class GoogleCloudTTSProvider extends BaseTTSProvider {
       clientOptions.credentials = this.config.credentials;
     }
 
-    this.client = new TextToSpeechClient(clientOptions);
+    const client = new TextToSpeechClient(clientOptions);
+
+    // Cache the client for this region
+    this.clientsByRegion.set(effectiveRegion, client);
 
     this.log('debug', 'Google Cloud TTS client initialized', {
-      apiEndpoint: clientOptions.apiEndpoint,
+      region: effectiveRegion,
+      apiEndpoint,
     });
 
-    return this.client;
+    return client;
   }
 
   /**
@@ -253,17 +273,22 @@ export class GoogleCloudTTSProvider extends BaseTTSProvider {
 
     const startTime = Date.now();
 
-    // Extract options
+    // Extract options including region override
     const options = (request.providerOptions || {}) as GoogleCloudTTSProviderOptions;
+
+    // Use region from providerOptions if specified, otherwise use config default
+    const effectiveRegion = options.region || this.config.region || 'eu';
 
     this.log('debug', 'Synthesizing with Google Cloud TTS', {
       voiceId,
       textLength: text.length,
-      region: this.config.region,
+      region: effectiveRegion,
+      regionSource: options.region ? 'providerOptions' : 'config',
     });
 
     try {
-      const client = await this.getClient();
+      // Get client for the specified region
+      const client = await this.getClient(effectiveRegion);
 
       // Parse voice ID to extract language code and voice name
       const { languageCode, voiceName } = this.parseVoiceId(voiceId);

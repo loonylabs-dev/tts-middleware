@@ -607,6 +607,63 @@ describe('GoogleCloudTTSProvider', () => {
         })
       );
     });
+
+    test('uses region from providerOptions for per-request override', async () => {
+      // Provider initialized with default EU region
+      const provider = new GoogleCloudTTSProvider({ region: 'eu' });
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Test',
+        voice: { id: 'de-DE-Neural2-G' },
+        providerOptions: {
+          region: 'europe-west3', // Override to Frankfurt
+        },
+      };
+
+      await provider.synthesize('Test', 'de-DE-Neural2-G', request);
+
+      // Client should be created with Frankfurt endpoint
+      expect(mockTextToSpeechClient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiEndpoint: 'europe-west3-texttospeech.googleapis.com',
+        })
+      );
+    });
+
+    test('caches separate clients per region', async () => {
+      const provider = new GoogleCloudTTSProvider({ region: 'eu' });
+
+      // First request with EU region (default)
+      const request1: TTSSynthesizeRequest = {
+        text: 'Test 1',
+        voice: { id: 'de-DE-Neural2-G' },
+      };
+      await provider.synthesize('Test 1', 'de-DE-Neural2-G', request1);
+
+      // Second request with Frankfurt region override
+      const request2: TTSSynthesizeRequest = {
+        text: 'Test 2',
+        voice: { id: 'de-DE-Neural2-G' },
+        providerOptions: { region: 'europe-west3' },
+      };
+      await provider.synthesize('Test 2', 'de-DE-Neural2-G', request2);
+
+      // Third request back to EU region (should use cached client)
+      const request3: TTSSynthesizeRequest = {
+        text: 'Test 3',
+        voice: { id: 'de-DE-Neural2-G' },
+      };
+      await provider.synthesize('Test 3', 'de-DE-Neural2-G', request3);
+
+      // Should have created exactly 2 clients (one for EU, one for Frankfurt)
+      expect(mockTextToSpeechClient).toHaveBeenCalledTimes(2);
+      expect(mockTextToSpeechClient).toHaveBeenCalledWith(
+        expect.objectContaining({ apiEndpoint: 'eu-texttospeech.googleapis.com' })
+      );
+      expect(mockTextToSpeechClient).toHaveBeenCalledWith(
+        expect.objectContaining({ apiEndpoint: 'europe-west3-texttospeech.googleapis.com' })
+      );
+    });
   });
 
   describe('Error Handling', () => {

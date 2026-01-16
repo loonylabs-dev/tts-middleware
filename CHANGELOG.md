@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-01-16
+
+### Fixed
+- **Google Cloud TTS Region Override:** Region from `providerOptions` is now correctly applied
+  - Previously, `providerOptions.region` was ignored and only the config/environment region was used
+  - Now, per-request region override works as documented
+  - Example: `providerOptions: { region: 'europe-west3' }` correctly uses Frankfurt endpoint
+- **Client Caching per Region:** TTS clients are now cached per region
+  - Enables efficient runtime region switching without recreating clients
+  - Each unique region gets its own cached client instance
+
+### Added
+- **New Unit Tests:** 2 tests for region override and per-region client caching
+
 ## [0.4.0] - 2026-01-16
 
 ### Added
