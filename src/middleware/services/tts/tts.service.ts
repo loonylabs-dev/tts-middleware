@@ -12,6 +12,7 @@ import { TTSProvider } from './types';
 import type { BaseTTSProvider } from './providers/base-tts-provider';
 import { AzureProvider } from './providers/azure-provider';
 import { EdenAIProvider } from './providers/edenai-provider';
+import { GoogleCloudTTSProvider } from './providers/google-cloud-tts-provider';
 
 /**
  * TTS Service - Main orchestrator for TTS operations
@@ -96,6 +97,18 @@ export class TTSService {
       this.log('debug', 'EdenAI provider initialized');
     } catch (error) {
       this.log('warn', 'Failed to initialize EdenAI provider', {
+        error: (error as Error).message,
+      });
+    }
+
+    try {
+      // Initialize Google Cloud TTS provider
+      const googleProvider = new GoogleCloudTTSProvider();
+      this.providers.set(TTSProvider.GOOGLE, googleProvider);
+
+      this.log('debug', 'Google Cloud TTS provider initialized');
+    } catch (error) {
+      this.log('warn', 'Failed to initialize Google Cloud TTS provider', {
         error: (error as Error).message,
       });
     }

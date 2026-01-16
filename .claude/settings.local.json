@@ -7,7 +7,20 @@
       "Bash(npm test:*)",
       "Bash(git commit:*)",
       "Bash(npm run test:coverage:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.cloud.google.com)",
+      "Bash(npx ts-node:*)",
+      "Bash(dir:*)",
+      "Bash(if exist outputgoogle-*.mp3 del outputgoogle-*.mp3)",
+      "Bash(if exist outputgoogle-*.wav del outputgoogle-*.wav)",
+      "Bash(ls:*)",
+      "Bash(node -e:*)",
+      "Bash(npm pack:*)"
     ]
   }
 }

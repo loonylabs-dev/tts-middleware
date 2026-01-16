@@ -67,6 +67,56 @@ export interface EdenAIConfig {
 }
 
 /**
+ * Supported Google Cloud TTS regions for EU data residency
+ */
+export type GoogleCloudTTSRegion =
+  | 'eu'
+  | 'europe-west1'
+  | 'europe-west2'
+  | 'europe-west3'
+  | 'europe-west4'
+  | 'europe-west6'
+  | 'europe-west9'
+  | 'us-central1'
+  | 'global';
+
+/**
+ * Google Cloud TTS Configuration
+ */
+export interface GoogleCloudTTSConfig {
+  /**
+   * Google Cloud Project ID
+   * @env GOOGLE_CLOUD_PROJECT
+   * @required false (can be inferred from credentials)
+   * @example 'my-project-123'
+   */
+  PROJECT_ID: string;
+
+  /**
+   * Region for data residency (EU-compliance)
+   * @env GOOGLE_TTS_REGION
+   * @default 'eu'
+   * @example 'eu', 'europe-west3'
+   */
+  REGION: GoogleCloudTTSRegion;
+
+  /**
+   * Path to Service Account JSON file
+   * @env GOOGLE_APPLICATION_CREDENTIALS
+   * @required true
+   * @example './service-account.json'
+   */
+  CREDENTIALS_PATH: string;
+
+  /**
+   * DSGVO/GDPR compliance flag
+   * @description When true, uses EU-based regions for data processing
+   * @default true (for EU regions)
+   */
+  DSGVO_COMPLIANT: boolean;
+}
+
+/**
  * TTS Middleware Configuration Object
  */
 export interface TTSConfig {
@@ -86,6 +136,11 @@ export interface TTSConfig {
    * EdenAI configuration
    */
   EDENAI: EdenAIConfig;
+
+  /**
+   * Google Cloud TTS configuration
+   */
+  GOOGLE: GoogleCloudTTSConfig;
 
   /**
    * Enable debug logging
@@ -132,12 +187,15 @@ export function getTTSConfig(): TTSConfig {
   const azureRegion = process.env.AZURE_SPEECH_REGION?.trim() || 'germanywestcentral';
   const azureEndpoint = process.env.AZURE_SPEECH_ENDPOINT;
   const edenaiApiKey = process.env.EDENAI_API_KEY || '';
+  const googleProjectId = process.env.GOOGLE_CLOUD_PROJECT || '';
+  const googleRegion = (process.env.GOOGLE_TTS_REGION as GoogleCloudTTSRegion) || 'eu';
+  const googleCredentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
   const defaultProvider =
     (process.env.TTS_DEFAULT_PROVIDER as TTSProvider) || TTSProvider.AZURE;
   const debug = process.env.TTS_DEBUG === 'true';
 
-  // Determine DSGVO compliance based on region
-  const euRegions = [
+  // Determine DSGVO compliance based on Azure region
+  const azureEuRegions = [
     'germanywestcentral',
     'northeurope',
     'westeurope',
@@ -145,7 +203,19 @@ export function getTTSConfig(): TTSConfig {
     'switzerlandnorth',
     'uksouth',
   ];
-  const isDsgvoCompliant = euRegions.includes(azureRegion.toLowerCase());
+  const isAzureDsgvoCompliant = azureEuRegions.includes(azureRegion.toLowerCase());
+
+  // Determine DSGVO compliance based on Google region
+  const googleEuRegions: GoogleCloudTTSRegion[] = [
+    'eu',
+    'europe-west1',
+    'europe-west2',
+    'europe-west3',
+    'europe-west4',
+    'europe-west6',
+    'europe-west9',
+  ];
+  const isGoogleDsgvoCompliant = googleEuRegions.includes(googleRegion);
 
   // Build configuration object
   const config: TTSConfig = {
@@ -154,11 +224,17 @@ export function getTTSConfig(): TTSConfig {
       KEY: azureKey,
       REGION: azureRegion,
       ENDPOINT: azureEndpoint,
-      DSGVO_COMPLIANT: isDsgvoCompliant,
+      DSGVO_COMPLIANT: isAzureDsgvoCompliant,
       FREE_TIER_CHARS_PER_MONTH: 500_000,
     },
     EDENAI: {
       API_KEY: edenaiApiKey,
+    },
+    GOOGLE: {
+      PROJECT_ID: googleProjectId,
+      REGION: googleRegion,
+      CREDENTIALS_PATH: googleCredentialsPath,
+      DSGVO_COMPLIANT: isGoogleDsgvoCompliant,
     },
     DEBUG: debug,
     MAX_TEXT_LENGTH: 3000,
@@ -240,6 +316,15 @@ export function validateTTSConfig(config: TTSConfig): void {
     if (!config.EDENAI.API_KEY) {
       errors.push(
         'EDENAI_API_KEY is required when using EdenAI provider (set in environment variable)'
+      );
+    }
+  }
+
+  // Validate Google Cloud TTS configuration (if used as default provider)
+  if (config.DEFAULT_PROVIDER === TTSProvider.GOOGLE) {
+    if (!config.GOOGLE.CREDENTIALS_PATH) {
+      errors.push(
+        'GOOGLE_APPLICATION_CREDENTIALS is required when using Google Cloud TTS provider (set in environment variable)'
       );
     }
   }

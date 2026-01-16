@@ -42,6 +42,7 @@ export type {
   OpenAIProviderOptions,
   ElevenLabsProviderOptions,
   GoogleCloudProviderOptions,
+  GoogleCloudTTSProviderOptions,
   DeepgramProviderOptions,
   EdenAIProviderOptions,
   ProviderOptions,
@@ -52,6 +53,7 @@ export {
   isOpenAIOptions,
   isElevenLabsOptions,
   isGoogleCloudOptions,
+  isGoogleCloudTTSOptions,
   isDeepgramOptions,
   isEdenAIOptions,
 } from './types';
@@ -61,6 +63,12 @@ export {
   BaseTTSProvider,
   AzureProvider,
   EdenAIProvider,
+  GoogleCloudTTSProvider,
+} from './providers';
+
+export type {
+  GoogleCloudTTSRegion,
+  GoogleCloudTTSConfig,
 } from './providers';
 
 // ===== Errors =====

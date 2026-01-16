@@ -16,8 +16,9 @@ Build voice-enabled applications that switch seamlessly between Azure, EdenAI, O
 - **🔌 Provider Agnostic:** Unified API for all TTS providers. Switch providers by changing one config parameter.
 - **☁️ Multi-Provider Support:**
   - **Azure Speech Services:** Full support for Neural voices, emotions, and speaking styles.
-  - **EdenAI:** Access to 6+ providers (Google, OpenAI, Amazon, IBM, etc.) via a single aggregator API.
-  - **Ready for:** OpenAI, ElevenLabs, Google, Deepgram (interfaces prepared).
+  - **Google Cloud TTS:** Neural2, WaveNet, Studio, Chirp3-HD voices with EU regional endpoints.
+  - **EdenAI:** Access to 6+ providers (OpenAI, Amazon, IBM, etc.) via a single aggregator API.
+  - **Ready for:** OpenAI, ElevenLabs, Deepgram (interfaces prepared).
 - **📝 SSML Abstraction:** Auto-generates provider-specific SSML markup (e.g., for Azure prosody/styles) from simple JSON options.
 - **💰 Character Counting:** Precise character counting logic for billing estimation.
 - **🛡️ Robust Error Handling:** Standardized error types (`InvalidConfigError`, `QuotaExceededError`, `NetworkError`) across all providers.
@@ -46,7 +47,12 @@ TTS_DEFAULT_PROVIDER=azure
 AZURE_SPEECH_KEY=your_azure_key
 AZURE_SPEECH_REGION=germanywestcentral
 
-# EdenAI (Optional)
+# Google Cloud TTS (GDPR/DSGVO-compliant with EU endpoints)
+GOOGLE_APPLICATION_CREDENTIALS=./path/to/service-account.json
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_TTS_REGION=eu  # Options: eu, europe-west3 (Frankfurt), europe-west1, etc.
+
+# EdenAI (Optional - no DPA available)
 EDENAI_API_KEY=your_edenai_key
 ```
 
@@ -155,6 +161,43 @@ const response = await ttsService.synthesize({
 
 Format: `{language}_{voice}` (e.g., `de_nova`, `en_alloy`, `fr_shimmer`)
 
+### Using Google Cloud TTS (GDPR/DSGVO-Compliant)
+
+Google Cloud TTS with EU regional endpoints for data residency compliance:
+
+```typescript
+// Basic usage with EU endpoint (default)
+const response = await ttsService.synthesize({
+  text: "Guten Tag, wie geht es Ihnen?",
+  provider: TTSProvider.GOOGLE,
+  voice: { id: "de-DE-Neural2-G" },  // G=Female, H=Male
+  audio: { format: "mp3" }
+});
+
+// With Frankfurt endpoint for maximum DSGVO compliance
+const response = await ttsService.synthesize({
+  text: "Hallo Welt!",
+  provider: TTSProvider.GOOGLE,
+  voice: { id: "de-DE-Studio-C" },  // Premium Studio voice
+  audio: { format: "mp3", speed: 1.0, pitch: 0.0 },
+  providerOptions: {
+    region: "europe-west3",  // Frankfurt
+    effectsProfileId: ["headphone-class-device"]  // Audio optimization
+  }
+});
+```
+
+**Available German Voices:**
+
+| Type | Female | Male | Quality |
+|------|--------|------|---------|
+| Neural2 | `de-DE-Neural2-G` | `de-DE-Neural2-H` | Best value |
+| WaveNet | `de-DE-Wavenet-G` | `de-DE-Wavenet-H` | Good |
+| Studio | `de-DE-Studio-C` | `de-DE-Studio-B` | Premium |
+| Chirp3-HD | `de-DE-Chirp3-HD-Aoede`, `Kore`, ... | `de-DE-Chirp3-HD-Fenrir`, `Puck`, ... | Newest |
+
+> **Note:** German Neural2/WaveNet only have G and H variants (no A-F). Use `scripts/list-google-voices.ts` to query all available voices.
+
 ---
 
 ## 🏗️ Architecture
@@ -165,14 +208,16 @@ The middleware uses a singleton orchestrator pattern to manage provider instance
 graph TD
     App[Your Application] -->|synthesize()| Service[TTSService]
     Service -->|getProvider()| Registry{Provider Registry}
-    
+
     Registry -->|Select| Azure[AzureProvider]
+    Registry -->|Select| GCloud[GoogleCloudTTSProvider]
     Registry -->|Select| Eden[EdenAIProvider]
-    
+
     Azure -->|SSML/SDK| AzureAPI[Azure Speech API]
+    GCloud -->|gRPC/SDK| GoogleAPI[Google Cloud TTS API]
     Eden -->|REST| EdenAPI[EdenAI API]
-    
-    EdenAPI -.-> Google[Google TTS]
+
+    GoogleAPI -->|EU Endpoint| EU[eu-texttospeech.googleapis.com]
     EdenAPI -.-> OpenAI[OpenAI TTS]
     EdenAPI -.-> Amazon[Amazon Polly]
 ```
@@ -181,13 +226,13 @@ graph TD
 
 ## 🧩 Supported Providers
 
-| Provider | Status | Key Features |
-|----------|--------|--------------|
-| **Azure** | ✅ Stable | Neural Voices, Emotions, Styles, SSML, Visemes (planned) |
-| **EdenAI** | ✅ Stable | Aggregator for Google, OpenAI, Amazon, IBM, Microsoft |
-| **OpenAI** | 🔮 Planned | HD Audio, Simple API |
-| **ElevenLabs** | 🔮 Planned | Voice Cloning, High Expressivity |
-| **Google** | 🔮 Planned | WaveNet Voices, Pitch/Volume control |
+| Provider | Status | GDPR/DSGVO | Key Features |
+|----------|--------|------------|--------------|
+| **Azure** | ✅ Stable | ✅ EU Regions | Neural Voices, Emotions, Styles, SSML |
+| **Google Cloud** | ✅ Stable | ✅ EU Endpoints | Neural2, WaveNet, Studio, Chirp3-HD, Effects Profiles |
+| **EdenAI** | ✅ Stable | ⚠️ No DPA | Aggregator for Google, OpenAI, Amazon, IBM |
+| **OpenAI** | 🔮 Planned | ❌ | HD Audio, Simple API |
+| **ElevenLabs** | 🔮 Planned | ❌ | Voice Cloning, High Expressivity |
 
 ---
 
@@ -217,14 +262,24 @@ setLogger({
 
 ## 🧪 Testing
 
-The project maintains high code coverage (>94%) using Jest.
+The project maintains high code coverage (>90%) with 434+ tests using Jest.
 
 ```bash
-# Run unit & integration tests
+# Run all tests
 npm test
 
-# Run manual verification script (requires .env)
+# Run specific provider tests
+npm test -- --testPathPattern="google"
+npm test -- --testPathPattern="azure"
+npm test -- --testPathPattern="edenai"
+
+# Manual verification scripts (require .env)
+npx ts-node scripts/manual-test-google-cloud-tts.ts de neural2
 npx ts-node scripts/manual-test-edenai.ts
+
+# List available Google Cloud voices
+npx ts-node scripts/list-google-voices.ts de-DE
+npx ts-node scripts/list-google-voices.ts en-US
 ```
 
 ## 🤝 Contributing

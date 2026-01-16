@@ -40,3 +40,10 @@ output/
 # Temporary files
 *.tmp
 *.temp
+
+# Google Cloud Service Account credentials (NEVER commit these!)
+*-service-account.json
+*-credentials.json
+service-account*.json
+credentials/
+secrets/

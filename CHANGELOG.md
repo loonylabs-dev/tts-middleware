@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-16
+
+### Added
+- **Google Cloud Text-to-Speech Provider:** Full DSGVO/GDPR-compliant TTS integration
+  - EU regional endpoints (`eu-texttospeech.googleapis.com`, `europe-west3` for Frankfurt)
+  - Service Account authentication via `GOOGLE_APPLICATION_CREDENTIALS`
+  - Support for Neural2, WaveNet, Standard, Studio, and Chirp3-HD voices
+  - Audio configuration: MP3, WAV, Opus formats with speed, pitch, and volume controls
+  - Effects profiles for device-optimized audio (headphone, speaker, etc.)
+  - Automatic language code extraction from voice IDs
+- **New Environment Variables:**
+  - `GOOGLE_APPLICATION_CREDENTIALS` - Path to Service Account JSON
+  - `GOOGLE_CLOUD_PROJECT` - Google Cloud Project ID
+  - `GOOGLE_TTS_REGION` - Region for data residency (default: `eu`)
+- **Voice Listing Script:** `scripts/list-google-voices.ts` to query available voices
+- **Manual Test Script:** `scripts/manual-test-google-cloud-tts.ts` for verification
+- **Comprehensive Tests:** 71 new tests for Google Cloud TTS (unit + integration)
+
+### Changed
+- **Exports:** Added `GoogleCloudTTSProvider`, `GoogleCloudTTSRegion`, `GoogleCloudTTSConfig` to public API
+- **Dependencies:** Added `@google-cloud/text-to-speech` SDK
+
+### Documentation
+- Updated README with Google Cloud TTS usage examples
+- Added German voice reference (Neural2-G/H, WaveNet-G/H, Studio-B/C, Chirp3-HD)
+
 ## [0.3.0] - 2026-01-08
 
 ### Added
