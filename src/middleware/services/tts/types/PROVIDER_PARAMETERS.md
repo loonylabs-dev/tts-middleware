@@ -15,15 +15,15 @@ This document shows which parameters are supported by each TTS provider and thei
 
 These parameters are part of the core `TTSSynthesizeRequest` interface and work across all providers:
 
-| Parameter | Azure (MVP) | OpenAI | ElevenLabs | Google | Deepgram | Notes |
-|-----------|-------------|--------|------------|--------|----------|-------|
-| **text** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | Input text to synthesize |
-| **voice.id** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | Voice identifier (provider-specific) |
-| **audio.format** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | mp3, wav, opus, aac, flac |
-| **audio.speed** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | 0.5 - 2.0 multiplier |
-| **audio.sampleRate** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | 8000, 16000, 24000, 48000 Hz |
-| **audio.pitch** | 🔮 | ❌ | ❌ | 🔮 | ❌ | -20 to 20 semitones |
-| **audio.volumeGainDb** | 🔮 | ❌ | ❌ | 🔮 | ❌ | -96 to 16 dB |
+| Parameter | Azure (MVP) | OpenAI | ElevenLabs | Google | Deepgram | Fish Audio | Notes |
+|-----------|-------------|--------|------------|--------|----------|------------|-------|
+| **text** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | ✅ | Input text to synthesize |
+| **voice.id** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | ✅ | Voice identifier (provider-specific) |
+| **audio.format** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | ✅ | mp3, wav, opus, aac, flac |
+| **audio.speed** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | ✅ | 0.5 - 2.0 multiplier |
+| **audio.sampleRate** | ✅ | 🔮 | 🔮 | 🔮 | 🔮 | ✅ | 8000, 16000, 24000, 48000 Hz |
+| **audio.pitch** | 🔮 | ❌ | ❌ | 🔮 | ❌ | ❌ | -20 to 20 semitones |
+| **audio.volumeGainDb** | 🔮 | ❌ | ❌ | 🔮 | ❌ | ✅ | -96 to 16 dB |
 
 ---
 
@@ -132,6 +132,33 @@ Format: `{language_code}_{voice_name}` (e.g., `de_nova`, `en_alloy`)
 
 ---
 
+### Fish Audio (✅ Implemented – Test/Admin Only)
+
+| Parameter | Status | Type | Range/Options | Description |
+|-----------|--------|------|---------------|-------------|
+| **model** | ✅ | string | 's1', 'speech-1.6', 'speech-1.5' | TTS model selection |
+| **referenceId** | ✅ | string | Fish Audio model ID | Voice from library or custom clone |
+| **temperature** | ✅ | number | 0 - 1 (default: 0.7) | Controls expressiveness |
+| **topP** | ✅ | number | 0 - 1 (default: 0.7) | Nucleus sampling diversity |
+| **repetitionPenalty** | ✅ | number | default: 1.2 | Reduces repeated patterns |
+| **latency** | ✅ | string | 'low', 'normal', 'balanced' | Latency mode |
+| **chunkLength** | ✅ | number | 100 - 300 (default: 300) | Characters per chunk |
+| **normalize** | ✅ | boolean | true/false (default: true) | Normalize numbers |
+| **mp3Bitrate** | ✅ | number | 64, 128, 192 kbps | MP3 bitrate |
+| **opusBitrate** | ✅ | number | -1000 (auto), 24, 32, 48, 64 | Opus bitrate |
+
+**Implementation Status**: Implemented (test/admin only – no EU data residency)
+**Billing Model**: UTF-8 byte-based ($15 per 1M UTF-8 bytes, ~180k English words)
+**Free Tier**: None (pay-as-you-go)
+**EU Compliance**: ❌ (no EU data residency guarantees)
+
+**Models**: S1 (flagship, 4B params, #1 TTS-Arena2), speech-1.6 (stable), speech-1.5 (legacy)
+**Languages**: 13 with auto-detection (EN, DE, FR, ES, JA, ZH, KO, AR, RU, NL, IT, PL, PT)
+**Voices**: Community voice library + custom voice cloning
+**Emotions**: 64+ expressions via text markers (e.g., `(excited)`, `(sad)`, `(whispering)`)
+
+---
+
 ### Deepgram TTS (🔮 Future)
 
 | Parameter | Status | Type | Range/Options | Description |
@@ -153,41 +180,44 @@ Format: `{language_code}_{voice_name}` (e.g., `de_nova`, `en_alloy`)
 
 ## Feature Comparison
 
-| Feature | Azure | OpenAI | ElevenLabs | Google | Deepgram |
-|---------|-------|--------|------------|--------|----------|
-| **Character Billing** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Token Billing** | ❌ | ⚠️ (gpt-4o-mini-tts only) | ❌ | ❌ | ❌ |
-| **Speed Control** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Pitch Control** | ✅ | ❌ | ❌ | ✅ | ❌ |
-| **Emotion/Style** | ✅ | ❌ | ⚠️ (limited) | ❌ | ❌ |
-| **Streaming** | ✅ | ⚠️ (chunks only) | ✅ | ❌ | ✅ |
-| **SSML Support** | ✅ | ❌ | ❌ | ✅ | ❌ |
-| **EU Hosting** | ✅ (Frankfurt) | ⚠️ (US default) | ⚠️ (on request) | ✅ (EU available) | ✅ (api.eu.*) |
-| **DPA/GDPR** | ✅ | ⚠️ (available) | ⚠️ (available) | ✅ | ✅ |
-| **Free Tier** | 500k/month | ❌ | 10k/month | 1M/month | ❌ |
+| Feature | Azure | OpenAI | ElevenLabs | Google | Deepgram | Fish Audio |
+|---------|-------|--------|------------|--------|----------|------------|
+| **Character Billing** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (UTF-8 bytes) |
+| **Token Billing** | ❌ | ⚠️ (gpt-4o-mini-tts only) | ❌ | ❌ | ❌ | ❌ |
+| **Speed Control** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pitch Control** | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Emotion/Style** | ✅ | ❌ | ⚠️ (limited) | ❌ | ❌ | ✅ (64+ text markers) |
+| **Streaming** | ✅ | ⚠️ (chunks only) | ✅ | ❌ | ✅ | ⚠️ (WebSocket, not impl.) |
+| **SSML Support** | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **EU Hosting** | ✅ (Frankfurt) | ⚠️ (US default) | ⚠️ (on request) | ✅ (EU available) | ✅ (api.eu.*) | ❌ |
+| **DPA/GDPR** | ✅ | ⚠️ (available) | ⚠️ (available) | ✅ | ✅ | ❌ |
+| **Free Tier** | 500k/month | ❌ | 10k/month | 1M/month | ❌ | ❌ |
 
 ---
 
 ## Audio Format Support
 
-| Format | Azure | OpenAI | ElevenLabs | Google | Deepgram |
-|--------|-------|--------|------------|--------|----------|
-| **MP3** | ✅ MVP | 🔮 | 🔮 | 🔮 | 🔮 |
-| **WAV** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 |
-| **Opus** | ✅ MVP | 🔮 | ❌ | 🔮 | 🔮 |
-| **AAC** | ❌ | 🔮 | ❌ | ❌ | 🔮 |
-| **FLAC** | ❌ | 🔮 | ❌ | 🔮 | 🔮 |
+| Format | Azure | OpenAI | ElevenLabs | Google | Deepgram | Fish Audio |
+|--------|-------|--------|------------|--------|----------|------------|
+| **MP3** | ✅ MVP | 🔮 | 🔮 | 🔮 | 🔮 | ✅ |
+| **WAV** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 | ✅ |
+| **PCM** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Opus** | ✅ MVP | 🔮 | ❌ | 🔮 | 🔮 | ✅ |
+| **AAC** | ❌ | 🔮 | ❌ | ❌ | 🔮 | ❌ |
+| **FLAC** | ❌ | 🔮 | ❌ | 🔮 | 🔮 | ❌ |
 
 ---
 
 ## Sample Rate Support
 
-| Sample Rate | Azure | OpenAI | ElevenLabs | Google | Deepgram |
-|-------------|-------|--------|------------|--------|----------|
-| **8000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 |
-| **16000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 |
-| **24000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 |
-| **48000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 |
+| Sample Rate | Azure | OpenAI | ElevenLabs | Google | Deepgram | Fish Audio |
+|-------------|-------|--------|------------|--------|----------|------------|
+| **8000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 | ✅ |
+| **16000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 | ✅ |
+| **24000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 | ✅ |
+| **32000 Hz** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **44100 Hz** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **48000 Hz** | ✅ MVP | ❌ | ❌ | 🔮 | 🔮 | ✅ |
 
 ---
 
@@ -292,6 +322,22 @@ const request: TTSSynthesizeRequest = {
 };
 ```
 
+### Fish Audio with Emotion (Implemented)
+
+```typescript
+const request: TTSSynthesizeRequest = {
+  text: "(excited) Das ist fantastisch!",
+  provider: TTSProvider.FISH_AUDIO,
+  voice: { id: '90042f762dbf49baa2e7776d011eee6b' }, // German narrator voice
+  audio: { format: 'mp3' },
+  providerOptions: {
+    model: 's1',
+    temperature: 0.7,
+    latency: 'normal'
+  }
+};
+```
+
 ---
 
 ## Notes
@@ -309,11 +355,11 @@ All provider parameters are typed NOW to prevent breaking API changes:
 
 Consumers should choose providers based on:
 
-1. **Cost**: Azure/OpenAI/Deepgram (~$15-16/M) vs. ElevenLabs (~$150-200/M)
-2. **Quality**: ElevenLabs > Azure > OpenAI > Google > Deepgram (subjective)
-3. **Latency**: Deepgram < OpenAI < Azure < Google < ElevenLabs
-4. **Voice Selection**: ElevenLabs (500+) > Google (400+) > Azure (180+) > OpenAI (6)
-5. **EU Compliance**: Azure, Google, Deepgram have EU regions
+1. **Cost**: Azure/OpenAI/Deepgram/Fish Audio (~$15-16/M) vs. ElevenLabs (~$150-200/M)
+2. **Quality**: ElevenLabs > Fish Audio > Azure > OpenAI > Google > Deepgram (subjective)
+3. **Latency**: Deepgram < OpenAI < Azure < Fish Audio < Google < ElevenLabs
+4. **Voice Selection**: ElevenLabs (500+) > Google (400+) > Fish Audio (community library) > Azure (180+) > OpenAI (6)
+5. **EU Compliance**: Azure, Google, Deepgram have EU regions (Fish Audio: no EU guarantees)
 6. **Free Tier**: Google (1M) > Azure (500k) > ElevenLabs (10k) > Others (none)
 
 ### Billing Responsibility
@@ -331,6 +377,7 @@ const PROVIDER_RATES = {
   [TTSProvider.ELEVENLABS]: 160 / 1_000_000,
   [TTSProvider.GOOGLE]: 16 / 1_000_000,
   [TTSProvider.DEEPGRAM]: 15 / 1_000_000,
+  [TTSProvider.FISH_AUDIO]: 15 / 1_000_000, // per 1M UTF-8 bytes
 };
 
 const costUSD = response.billing.characters * PROVIDER_RATES[provider];
@@ -338,6 +385,6 @@ const costUSD = response.billing.characters * PROVIDER_RATES[provider];
 
 ---
 
-**Document Version**: 1.1
-**Last Updated**: 2026-01-08
-**Status**: Azure + EdenAI stable - Types ready for all providers
+**Document Version**: 1.2
+**Last Updated**: 2026-01-29
+**Status**: Azure + EdenAI + Google Cloud + Fish Audio implemented - Types ready for all providers

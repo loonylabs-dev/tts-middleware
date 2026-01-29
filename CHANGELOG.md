@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-29
+
+### Added
+- **Fish Audio TTS Provider:** New provider for Fish Audio's S1 model (test/admin only)
+  - REST API integration via `POST https://api.fish.audio/v1/tts` (zero dependencies)
+  - 3 models: `s1` (flagship, 4B params), `speech-1.6`, `speech-1.5`
+  - 13 languages with automatic detection (EN, DE, FR, ES, JA, ZH, KO, AR, RU, NL, IT, PL, PT)
+  - 64+ emotional expressions via text markers (e.g., `(excited)`, `(sad)`, `(whispering)`)
+  - Voice selection via `reference_id` from Fish Audio voice library or custom cloned voices
+  - Quality controls: `temperature`, `topP`, `repetitionPenalty`
+  - Latency modes: `low`, `normal`, `balanced`
+  - Audio formats: MP3, WAV, PCM, Opus with configurable bitrate and sample rate
+  - Prosody controls: speed and volume via universal `AudioOptions`
+  - **Note:** No EU data residency guarantees – intended for test/admin use only
+- **New Environment Variable:** `FISH_AUDIO_API_KEY` for Fish Audio API authentication
+- **New Types:** `FishAudioProviderOptions`, `isFishAudioOptions()` type guard
+- **Manual Test Script:** `scripts/manual-test-fish-audio.ts` with native German and English voice sets
+
+### Changed
+- **TTSProvider enum:** Added `FISH_AUDIO = 'fish_audio'`
+- **ProviderOptions union:** Includes `FishAudioProviderOptions`
+
 ## [0.4.1] - 2026-01-16
 
 ### Fixed

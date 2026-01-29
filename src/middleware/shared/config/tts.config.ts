@@ -117,6 +117,19 @@ export interface GoogleCloudTTSConfig {
 }
 
 /**
+ * Fish Audio Configuration
+ * Test/Admin only – no EU data residency guarantees.
+ */
+export interface FishAudioConfig {
+  /**
+   * Fish Audio API key
+   * @env FISH_AUDIO_API_KEY
+   * @required true
+   */
+  API_KEY: string;
+}
+
+/**
  * TTS Middleware Configuration Object
  */
 export interface TTSConfig {
@@ -141,6 +154,11 @@ export interface TTSConfig {
    * Google Cloud TTS configuration
    */
   GOOGLE: GoogleCloudTTSConfig;
+
+  /**
+   * Fish Audio configuration (test/admin only)
+   */
+  FISH_AUDIO: FishAudioConfig;
 
   /**
    * Enable debug logging
@@ -190,6 +208,7 @@ export function getTTSConfig(): TTSConfig {
   const googleProjectId = process.env.GOOGLE_CLOUD_PROJECT || '';
   const googleRegion = (process.env.GOOGLE_TTS_REGION as GoogleCloudTTSRegion) || 'eu';
   const googleCredentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
+  const fishAudioApiKey = process.env.FISH_AUDIO_API_KEY || '';
   const defaultProvider =
     (process.env.TTS_DEFAULT_PROVIDER as TTSProvider) || TTSProvider.AZURE;
   const debug = process.env.TTS_DEBUG === 'true';
@@ -235,6 +254,9 @@ export function getTTSConfig(): TTSConfig {
       REGION: googleRegion,
       CREDENTIALS_PATH: googleCredentialsPath,
       DSGVO_COMPLIANT: isGoogleDsgvoCompliant,
+    },
+    FISH_AUDIO: {
+      API_KEY: fishAudioApiKey,
     },
     DEBUG: debug,
     MAX_TEXT_LENGTH: 3000,
@@ -325,6 +347,15 @@ export function validateTTSConfig(config: TTSConfig): void {
     if (!config.GOOGLE.CREDENTIALS_PATH) {
       errors.push(
         'GOOGLE_APPLICATION_CREDENTIALS is required when using Google Cloud TTS provider (set in environment variable)'
+      );
+    }
+  }
+
+  // Validate Fish Audio configuration (if used as default provider)
+  if (config.DEFAULT_PROVIDER === TTSProvider.FISH_AUDIO) {
+    if (!config.FISH_AUDIO.API_KEY) {
+      errors.push(
+        'FISH_AUDIO_API_KEY is required when using Fish Audio provider (set in environment variable)'
       );
     }
   }

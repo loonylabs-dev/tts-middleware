@@ -516,6 +516,102 @@ export interface EdenAIProviderOptions {
 }
 
 /**
+ * Fish Audio TTS provider options
+ *
+ * @provider Fish Audio TTS API
+ * @description Fish Audio S1 model with 13 language support and 64+ emotional expressions.
+ * Test/Admin only – no EU data residency guarantees.
+ *
+ * @see https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
+ */
+export interface FishAudioProviderOptions {
+  /**
+   * TTS model to use
+   *
+   * @options
+   * - 's1': Fish Audio S1 (flagship, 4B params, recommended)
+   * - 'speech-1.6': Previous generation, production-tested
+   * - 'speech-1.5': Legacy, lower resource demands
+   *
+   * @default 's1'
+   */
+  model?: 's1' | 'speech-1.6' | 'speech-1.5';
+
+  /**
+   * Voice model reference ID from Fish Audio library
+   *
+   * @description Use a model ID from the Fish Audio voice library or a custom cloned voice.
+   * If not set, uses the default Fish Audio voice.
+   *
+   * @example '8ef4a238714b45718ce04243307c57a7' (E-girl)
+   * @example '802e3bc2b27e49c2995d23ef70e6ac89' (Energetic Male)
+   */
+  referenceId?: string;
+
+  /**
+   * Controls expressiveness of the speech
+   *
+   * @range 0 - 1
+   * @default 0.7
+   */
+  temperature?: number;
+
+  /**
+   * Controls diversity via nucleus sampling
+   *
+   * @range 0 - 1
+   * @default 0.7
+   */
+  topP?: number;
+
+  /**
+   * Reduces repeated patterns in output
+   *
+   * @default 1.2
+   */
+  repetitionPenalty?: number;
+
+  /**
+   * Latency mode
+   *
+   * @options 'low', 'normal', 'balanced'
+   * @default 'normal'
+   */
+  latency?: 'low' | 'normal' | 'balanced';
+
+  /**
+   * Characters per processing chunk
+   *
+   * @range 100 - 300
+   * @default 300
+   */
+  chunkLength?: number;
+
+  /**
+   * Whether to normalize text (improves stability for numbers)
+   *
+   * @default true
+   */
+  normalize?: boolean;
+
+  /**
+   * MP3 bitrate in kbps (only for mp3 format)
+   *
+   * @options 64, 128, 192
+   * @default 128
+   */
+  mp3Bitrate?: 64 | 128 | 192;
+
+  /**
+   * Opus bitrate in bps (only for opus format)
+   *
+   * @options -1000 (auto), 24, 32, 48, 64
+   * @default -1000
+   */
+  opusBitrate?: -1000 | 24 | 32 | 48 | 64;
+}
+
+/**
  * Union type of all provider options
  *
  * @description Use this type when you need to accept any provider options
@@ -526,7 +622,8 @@ export type ProviderOptions =
   | ElevenLabsProviderOptions
   | GoogleCloudTTSProviderOptions
   | DeepgramProviderOptions
-  | EdenAIProviderOptions;
+  | EdenAIProviderOptions
+  | FishAudioProviderOptions;
 
 /**
  * Type guard to check if options are for Azure
@@ -613,5 +710,22 @@ export function isEdenAIOptions(
       'speaking_volume' in options ||
       'fallback_providers' in options ||
       'webhook_url' in options)
+  );
+}
+
+/**
+ * Type guard to check if options are for Fish Audio
+ */
+export function isFishAudioOptions(
+  options: unknown
+): options is FishAudioProviderOptions {
+  return (
+    typeof options === 'object' &&
+    options !== null &&
+    ('referenceId' in options ||
+      'temperature' in options ||
+      'topP' in options ||
+      'repetitionPenalty' in options ||
+      'chunkLength' in options)
   );
 }
