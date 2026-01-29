@@ -8,6 +8,11 @@
 import { TTSService, ttsService } from '../../src/middleware/services/tts/tts.service';
 import type { TTSSynthesizeRequest } from '../../src/middleware/services/tts/types';
 import { TTSProvider } from '../../src/middleware/services/tts/types';
+import {
+  QuotaExceededError,
+  InvalidConfigError,
+} from '../../src/middleware/services/tts/providers/base-tts-provider';
+import * as retryUtils from '../../src/middleware/services/tts/utils/retry.utils';
 
 // Mock the Azure provider
 jest.mock('../../src/middleware/services/tts/providers/azure-provider', () => {
@@ -399,6 +404,141 @@ describe('TTSService', () => {
       const response = await service.synthesize(request);
 
       expect(response.audio).toBeInstanceOf(Buffer);
+    });
+  });
+
+  describe('Retry', () => {
+    let service: TTSService;
+
+    beforeEach(() => {
+      service = new TTSService();
+      // Mock sleep to avoid real delays
+      jest.spyOn(retryUtils, 'sleep').mockResolvedValue(undefined);
+    });
+
+    test('retries on retryable error with default config (retry: undefined)', async () => {
+      const provider = service.getProvider(TTSProvider.AZURE);
+      jest
+        .spyOn(provider, 'synthesize')
+        .mockRejectedValueOnce(new QuotaExceededError('azure', 'Rate limited'))
+        .mockResolvedValue({
+          audio: Buffer.from('mock-audio'),
+          metadata: {
+            provider: 'azure',
+            voice: 'en-US-JennyNeural',
+            duration: 1000,
+            audioFormat: 'mp3',
+            sampleRate: 24000,
+          },
+          billing: { characters: 5 },
+        });
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Hello',
+        voice: { id: 'en-US-JennyNeural' },
+      };
+
+      const response = await service.synthesize(request);
+
+      expect(response.audio).toBeInstanceOf(Buffer);
+      expect(provider.synthesize).toHaveBeenCalledTimes(2);
+    });
+
+    test('retries when retry: true', async () => {
+      const provider = service.getProvider(TTSProvider.AZURE);
+      jest
+        .spyOn(provider, 'synthesize')
+        .mockRejectedValueOnce(new QuotaExceededError('azure'))
+        .mockResolvedValue({
+          audio: Buffer.from('mock-audio'),
+          metadata: {
+            provider: 'azure',
+            voice: 'en-US-JennyNeural',
+            duration: 1000,
+            audioFormat: 'mp3',
+            sampleRate: 24000,
+          },
+          billing: { characters: 5 },
+        });
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Hello',
+        voice: { id: 'en-US-JennyNeural' },
+        retry: true,
+      };
+
+      const response = await service.synthesize(request);
+
+      expect(response.audio).toBeInstanceOf(Buffer);
+      expect(provider.synthesize).toHaveBeenCalledTimes(2);
+    });
+
+    test('does not retry when retry: false', async () => {
+      const provider = service.getProvider(TTSProvider.AZURE);
+      const error = new QuotaExceededError('azure', 'Rate limited');
+      jest.spyOn(provider, 'synthesize').mockRejectedValue(error);
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Hello',
+        voice: { id: 'en-US-JennyNeural' },
+        retry: false,
+      };
+
+      await expect(service.synthesize(request)).rejects.toThrow(
+        QuotaExceededError
+      );
+      expect(provider.synthesize).toHaveBeenCalledTimes(1);
+    });
+
+    test('uses custom retry config', async () => {
+      const provider = service.getProvider(TTSProvider.AZURE);
+      jest
+        .spyOn(provider, 'synthesize')
+        .mockRejectedValueOnce(new QuotaExceededError('azure'))
+        .mockResolvedValue({
+          audio: Buffer.from('mock-audio'),
+          metadata: {
+            provider: 'azure',
+            voice: 'en-US-JennyNeural',
+            duration: 1000,
+            audioFormat: 'mp3',
+            sampleRate: 24000,
+          },
+          billing: { characters: 5 },
+        });
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Hello',
+        voice: { id: 'en-US-JennyNeural' },
+        retry: {
+          maxRetries: 1,
+          initialDelayMs: 100,
+          multiplier: 2,
+          maxDelayMs: 1000,
+        },
+      };
+
+      const response = await service.synthesize(request);
+
+      expect(response.audio).toBeInstanceOf(Buffer);
+      expect(provider.synthesize).toHaveBeenCalledTimes(2);
+    });
+
+    test('does not retry non-retryable errors even with retry: true', async () => {
+      const provider = service.getProvider(TTSProvider.AZURE);
+      const error = new InvalidConfigError('azure', 'Bad API key');
+      jest.spyOn(provider, 'synthesize').mockRejectedValue(error);
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Hello',
+        voice: { id: 'en-US-JennyNeural' },
+        retry: true,
+      };
+
+      await expect(service.synthesize(request)).rejects.toThrow(
+        InvalidConfigError
+      );
+      expect(provider.synthesize).toHaveBeenCalledTimes(1);
     });
   });
 });

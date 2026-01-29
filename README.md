@@ -48,6 +48,7 @@
 - **Character Billing**: Accurate character counting for cost calculation
 - **Pluggable Logger**: Bring your own logger (Winston, Pino, etc.) or use the built-in console logger
 - **TypeScript First**: Full type safety with comprehensive interfaces
+- **Retry with Backoff**: Automatic retry for transient errors (429, 5xx, timeouts) with exponential backoff and jitter
 - **Error Handling**: Typed error classes (InvalidConfig, QuotaExceeded, SynthesisFailed, etc.)
 - **Zero Lock-in**: Switch providers without changing your application code
 
@@ -321,6 +322,7 @@ interface TTSSynthesizeRequest {
     sampleRate?: number;
   };
   providerOptions?: Record<string, unknown>;
+  retry?: boolean | RetryConfig; // default: true
 }
 ```
 
@@ -367,6 +369,49 @@ setLogger(silentLogger);
 // Control log level
 setLogLevel('warn');
 ```
+
+</details>
+
+<details>
+<summary><strong>Retry with Exponential Backoff</strong></summary>
+
+All provider calls are automatically retried on transient errors (429 rate limit, 5xx server errors, timeouts). Non-retryable errors (401, 403, 400) are thrown immediately.
+
+```typescript
+// Default: retry enabled (3 retries, 1s initial delay, 2x multiplier)
+const response = await ttsService.synthesize({
+  text: 'Hello World',
+  voice: { id: 'en-US-JennyNeural' },
+});
+
+// Disable retry
+const response = await ttsService.synthesize({
+  text: 'Hello World',
+  voice: { id: 'en-US-JennyNeural' },
+  retry: false,
+});
+
+// Custom retry config
+const response = await ttsService.synthesize({
+  text: 'Hello World',
+  voice: { id: 'en-US-JennyNeural' },
+  retry: {
+    maxRetries: 5,
+    initialDelayMs: 500,
+    multiplier: 2,
+    maxDelayMs: 10000,
+  },
+});
+```
+
+| Error Type | Retried? | Examples |
+|------------|----------|----------|
+| Rate limit | Yes | 429 Too Many Requests |
+| Server error | Yes | 500, 502, 503, 504 |
+| Timeout | Yes | Request timeout, ECONNREFUSED, ECONNRESET |
+| Auth error | No | 401, 403 |
+| Bad request | No | 400, invalid voice |
+| Unknown | No | SynthesisFailedError |
 
 </details>
 
@@ -444,7 +489,7 @@ graph TD
 ## Testing
 
 ```bash
-# Run all tests (436 tests, >90% coverage)
+# Run all tests (512 tests, >90% coverage)
 npm test
 
 # Unit tests only

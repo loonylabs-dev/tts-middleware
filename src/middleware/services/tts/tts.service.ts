@@ -14,6 +14,11 @@ import { AzureProvider } from './providers/azure-provider';
 import { EdenAIProvider } from './providers/edenai-provider';
 import { GoogleCloudTTSProvider } from './providers/google-cloud-tts-provider';
 import { FishAudioProvider } from './providers/fish-audio-provider';
+import {
+  executeWithRetry,
+  DEFAULT_RETRY_CONFIG,
+} from './utils/retry.utils';
+import type { RetryConfig } from './utils/retry.utils';
 
 /**
  * TTS Service - Main orchestrator for TTS operations
@@ -194,13 +199,27 @@ export class TTSService {
       textLength: request.text.length,
     });
 
-    try {
-      // Delegate to provider
+    // Resolve retry configuration
+    const retryConfig = this.resolveRetryConfig(request.retry);
+
+    const synthesizeFn = async () => {
       const response = await provider.synthesize(
         request.text,
         request.voice.id,
         request
       );
+      return response;
+    };
+
+    try {
+      const response = retryConfig
+        ? await executeWithRetry(
+            synthesizeFn,
+            retryConfig,
+            (level, message, meta) =>
+              this.log(level, message, { provider: providerEnum, ...meta })
+          )
+        : await synthesizeFn();
 
       this.log('info', 'Synthesis completed', {
         provider: providerEnum,
@@ -215,7 +234,6 @@ export class TTSService {
         error: (error as Error).message,
       });
 
-      // Re-throw with provider context
       throw error;
     }
   }
@@ -317,6 +335,27 @@ export class TTSService {
    */
   public isProviderAvailable(provider: TTSProvider): boolean {
     return this.providers.has(provider);
+  }
+
+  /**
+   * Resolve retry configuration from request
+   *
+   * @private
+   * @param retry - Retry option from request (true, false, or RetryConfig)
+   * @returns RetryConfig if retry is enabled, null if disabled
+   */
+  private resolveRetryConfig(
+    retry?: boolean | RetryConfig
+  ): RetryConfig | null {
+    // Default: retry enabled
+    if (retry === undefined || retry === true) {
+      return DEFAULT_RETRY_CONFIG;
+    }
+    if (retry === false) {
+      return null;
+    }
+    // Custom config object
+    return retry;
   }
 
   /**

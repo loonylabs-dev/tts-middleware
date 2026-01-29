@@ -1,3 +1,5 @@
+import type { RetryConfig } from '../utils/retry.utils';
+
 /**
  * Common types and interfaces for TTS Middleware
  *
@@ -157,6 +159,33 @@ export interface TTSSynthesizeRequest {
    * ```
    */
   providerOptions?: Record<string, unknown>;
+
+  /**
+   * Enable retry with exponential backoff for transient errors
+   *
+   * @description When enabled (default), the middleware automatically retries
+   * on transient errors (429 rate limit, 5xx server errors, timeouts).
+   * Non-retryable errors (401, 403, 400) are thrown immediately.
+   *
+   * - `true` — retry with default config (3 retries, 1s initial delay, 2x multiplier)
+   * - `false` — no retry, errors thrown immediately
+   * - `RetryConfig` object — retry with custom configuration
+   *
+   * @default true
+   *
+   * @example
+   * ```typescript
+   * // Default retry (on)
+   * { text: "Hello", voice: { id: "en-US-JennyNeural" } }
+   *
+   * // Disable retry
+   * { text: "Hello", voice: { id: "en-US-JennyNeural" }, retry: false }
+   *
+   * // Custom retry config
+   * { text: "Hello", voice: { id: "en-US-JennyNeural" }, retry: { maxRetries: 5, initialDelayMs: 500, multiplier: 2, maxDelayMs: 10000 } }
+   * ```
+   */
+  retry?: boolean | RetryConfig;
 }
 
 /**
