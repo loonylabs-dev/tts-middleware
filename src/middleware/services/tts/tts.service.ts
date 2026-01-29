@@ -13,6 +13,7 @@ import type { BaseTTSProvider } from './providers/base-tts-provider';
 import { AzureProvider } from './providers/azure-provider';
 import { EdenAIProvider } from './providers/edenai-provider';
 import { GoogleCloudTTSProvider } from './providers/google-cloud-tts-provider';
+import { FishAudioProvider } from './providers/fish-audio-provider';
 
 /**
  * TTS Service - Main orchestrator for TTS operations
@@ -113,6 +114,18 @@ export class TTSService {
       });
     }
 
+    try {
+      // Initialize Fish Audio provider (test/admin only)
+      const fishAudioProvider = new FishAudioProvider();
+      this.providers.set(TTSProvider.FISH_AUDIO, fishAudioProvider);
+
+      this.log('debug', 'Fish Audio provider initialized');
+    } catch (error) {
+      this.log('warn', 'Failed to initialize Fish Audio provider', {
+        error: (error as Error).message,
+      });
+    }
+
     // Future providers will be initialized here:
     // try {
     //   const openaiProvider = new OpenAIProvider();
@@ -142,6 +155,7 @@ export class TTSService {
       elevenlabs: TTSProvider.ELEVENLABS,
       google: TTSProvider.GOOGLE,
       deepgram: TTSProvider.DEEPGRAM,
+      fish_audio: TTSProvider.FISH_AUDIO,
     };
 
     return providerMap[normalized];

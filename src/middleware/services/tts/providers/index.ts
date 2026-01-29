@@ -21,6 +21,7 @@ export { AzureProvider } from './azure-provider';
 export { EdenAIProvider } from './edenai-provider';
 export { GoogleCloudTTSProvider } from './google-cloud-tts-provider';
 export type { GoogleCloudTTSRegion, GoogleCloudTTSConfig } from './google-cloud-tts-provider';
+export { FishAudioProvider } from './fish-audio-provider';
 
 // Future provider implementations will be exported here:
 // export { OpenAIProvider } from './openai-provider';

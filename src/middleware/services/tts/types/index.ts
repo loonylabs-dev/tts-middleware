@@ -34,6 +34,7 @@ export type {
   GoogleCloudTTSRegion,
   DeepgramProviderOptions,
   EdenAIProviderOptions,
+  FishAudioProviderOptions,
   ProviderOptions,
 } from './provider-options.types';
 
@@ -45,6 +46,7 @@ export {
   isGoogleCloudOptions, // deprecated alias
   isDeepgramOptions,
   isEdenAIOptions,
+  isFishAudioOptions,
 } from './provider-options.types';
 
 /**

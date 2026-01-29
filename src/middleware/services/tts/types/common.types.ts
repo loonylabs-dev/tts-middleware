@@ -22,6 +22,7 @@ export enum TTSProvider {
   ELEVENLABS = 'elevenlabs',
   GOOGLE = 'google',
   DEEPGRAM = 'deepgram',
+  FISH_AUDIO = 'fish_audio',
 }
 
 /**

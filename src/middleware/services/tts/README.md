@@ -11,6 +11,9 @@ tts/
 ├── providers/              # Provider implementations
 │   ├── base-tts-provider.ts       # Abstract base class
 │   ├── azure-provider.ts          # Azure Speech Services (MVP)
+│   ├── edenai-provider.ts         # EdenAI multi-provider aggregator
+│   ├── google-cloud-tts-provider.ts # Google Cloud TTS (EU-compliant)
+│   ├── fish-audio-provider.ts     # Fish Audio S1 (test/admin only)
 │   └── index.ts
 ├── types/                  # TypeScript interfaces & types
 │   ├── common.types.ts            # Universal types
