@@ -56,6 +56,7 @@ EdenAI is a multi-provider aggregator. Use `settings` to configure provider-spec
 | **provider** | ✅ Stable | string | 'google', 'openai', 'amazon', 'ibm', 'microsoft', 'elevenlabs' | Underlying TTS provider |
 | **settings** | ✅ Stable | object | `{ openai: 'de_nova' }` | Provider-specific voice/model selection |
 | **option** | ✅ Stable | string | 'FEMALE', 'MALE' | Gender option (fallback) |
+| **voice_id** | ✅ Stable | string | e.g. 'Aria', 'Roger' | Provider-specific voice name (e.g. ElevenLabs) |
 | **model** | ⚠️ Deprecated | string | 'Neural', 'Standard' | Use `settings` instead |
 
 **Implementation Status**: Stable
@@ -74,6 +75,22 @@ Format: `{language_code}_{voice_name}` (e.g., `de_nova`, `en_alloy`)
 | `onyx` | Male, deep | `de_onyx` | `en_onyx` |
 | `nova` | Female | `de_nova` | `en_nova` |
 | `shimmer` | Female, warm | `de_shimmer` | `en_shimmer` |
+
+#### ElevenLabs Voices via EdenAI
+
+Use `voice_id` to select a specific ElevenLabs voice:
+
+```typescript
+providerOptions: {
+  provider: 'elevenlabs',
+  voice_id: 'Aria',   // specific voice
+  option: 'FEMALE',   // gender fallback
+}
+```
+
+**Tested ElevenLabs Voices:** Aria, Roger, Sarah, Laura, Charlie, George
+
+#### OpenAI Voices via EdenAI
 
 **Supported Languages (57):** af, ar, az, be, bg, bs, ca, cs, cy, da, de, el, en, es, et, fa, fi, fr, gl, he, hi, hr, hu, hy, id, is, it, ja, kk, kn, ko, lt, lv, mi, mk, mr, ms, ne, nl, no, pl, pt, ro, ru, sk, sl, sr, sv, sw, ta, th, tl, tr, uk, ur, vi, zh
 
@@ -385,6 +402,6 @@ const costUSD = response.billing.characters * PROVIDER_RATES[provider];
 
 ---
 
-**Document Version**: 1.2
+**Document Version**: 1.3
 **Last Updated**: 2026-01-29
 **Status**: Azure + EdenAI + Google Cloud + Fish Audio implemented - Types ready for all providers

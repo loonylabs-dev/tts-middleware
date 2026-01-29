@@ -235,6 +235,11 @@ export class EdenAIProvider extends BaseTTSProvider {
       edenaiRequest.settings = { [providerName]: options.model };
     }
 
+    // Voice ID for provider-specific voice selection (e.g., ElevenLabs: 'Aria')
+    if (options.voice_id) {
+      edenaiRequest.voice_id = options.voice_id;
+    }
+
     // Fallback providers (top-level)
     if (options.fallback_providers && options.fallback_providers.length > 0) {
       edenaiRequest.fallback_providers = options.fallback_providers;

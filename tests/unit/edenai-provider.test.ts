@@ -295,6 +295,46 @@ describe('EdenAIProvider', () => {
 
       expect(requestBody.fallback_providers).toEqual(['google', 'amazon']);
     });
+
+    test('includes voice_id in request when specified', async () => {
+      const provider = new EdenAIProvider();
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Hallo',
+        voice: { id: 'de' },
+        providerOptions: {
+          provider: 'elevenlabs',
+          voice_id: 'Aria',
+        },
+      };
+
+      await provider.synthesize('Hallo', 'de', request);
+
+      const fetchCall = (fetch as jest.Mock).mock.calls[0];
+      const requestBody = JSON.parse(fetchCall[1].body);
+
+      expect(requestBody.voice_id).toBe('Aria');
+      expect(requestBody.providers).toBe('elevenlabs');
+    });
+
+    test('does not include voice_id when not specified', async () => {
+      const provider = new EdenAIProvider();
+
+      const request: TTSSynthesizeRequest = {
+        text: 'Test',
+        voice: { id: 'en' },
+        providerOptions: {
+          provider: 'google',
+        },
+      };
+
+      await provider.synthesize('Test', 'en', request);
+
+      const fetchCall = (fetch as jest.Mock).mock.calls[0];
+      const requestBody = JSON.parse(fetchCall[1].body);
+
+      expect(requestBody.voice_id).toBeUndefined();
+    });
   });
 
   describe('Language Extraction', () => {

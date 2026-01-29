@@ -442,6 +442,17 @@ export interface EdenAIProviderOptions {
   option?: string;
 
   /**
+   * Specific voice ID for the underlying provider
+   *
+   * @description Passed as top-level `voice_id` to EdenAI API for provider-specific voice selection.
+   * Useful for providers like ElevenLabs where `option` only supports MALE/FEMALE.
+   *
+   * @example 'Aria' (ElevenLabs)
+   * @example 'Roger' (ElevenLabs)
+   */
+  voice_id?: string;
+
+  /**
    * Speaking rate multiplier
    *
    * @description Controls the speed of speech synthesis

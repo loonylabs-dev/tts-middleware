@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-01-29
+
+### Added
+- **EdenAI `voice_id` Support:** Pass provider-specific voice names to EdenAI API
+  - New `voice_id` field in `EdenAIProviderOptions` for specific voice selection
+  - Enables ElevenLabs voices (Aria, Roger, Sarah, Laura, Charlie, George) via EdenAI
+  - Works with any EdenAI-supported provider, not just ElevenLabs
+  - Example: `providerOptions: { provider: 'elevenlabs', voice_id: 'Aria' }`
+
+### Documentation
+- Updated PROVIDER_PARAMETERS.md with `voice_id` parameter and ElevenLabs voice examples
+- Updated README with ElevenLabs via EdenAI usage example
+
 ## [0.5.0] - 2026-01-29
 
 ### Added

@@ -112,6 +112,14 @@ const edenai = await ttsService.synthesize({
   providerOptions: { provider: 'openai', settings: { openai: 'en_nova' } },
 });
 
+// EdenAI (ElevenLabs with specific voice)
+const elevenlabs = await ttsService.synthesize({
+  text: 'Hallo, willkommen!',
+  provider: TTSProvider.EDENAI,
+  voice: { id: 'de' },
+  providerOptions: { provider: 'elevenlabs', voice_id: 'Aria' },
+});
+
 // Fish Audio (test/admin only)
 const fish = await ttsService.synthesize({
   text: '(excited) Das ist fantastisch!',
@@ -257,6 +265,7 @@ LOG_LEVEL=info
 | **Providers** | Google, OpenAI, Amazon, IBM, Microsoft, ElevenLabs |
 | **Voices** | Depends on underlying provider |
 | **OpenAI Voices** | alloy, echo, fable, onyx, nova, shimmer (57 languages) |
+| **ElevenLabs Voices** | Aria, Roger, Sarah, Laura, Charlie, George (via `voice_id`) |
 
 ### Fish Audio (Test/Admin Only)
 
