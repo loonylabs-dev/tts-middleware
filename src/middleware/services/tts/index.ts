@@ -103,3 +103,12 @@ export {
 } from './utils';
 
 export type { TTSLogger, LogLevel } from './utils';
+
+// ===== Retry =====
+export {
+  executeWithRetry,
+  isRetryableError,
+  DEFAULT_RETRY_CONFIG,
+} from './utils';
+
+export type { RetryConfig, RetryLogger } from './utils';

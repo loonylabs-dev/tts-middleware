@@ -631,7 +631,7 @@ describe('Google Cloud TTS Integration Tests', () => {
     });
 
     test('handles quota exceeded errors', async () => {
-      mockSynthesizeSpeech.mockRejectedValueOnce(new Error('429 Too Many Requests'));
+      mockSynthesizeSpeech.mockRejectedValue(new Error('429 Too Many Requests'));
 
       const service = new TTSService();
 

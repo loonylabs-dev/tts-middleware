@@ -25,3 +25,13 @@ export {
 } from './logger.utils';
 
 export type { TTSLogger, LogLevel } from './logger.utils';
+
+// Retry utilities
+export {
+  executeWithRetry,
+  isRetryableError,
+  calculateDelay,
+  DEFAULT_RETRY_CONFIG,
+} from './retry.utils';
+
+export type { RetryConfig, RetryLogger } from './retry.utils';
