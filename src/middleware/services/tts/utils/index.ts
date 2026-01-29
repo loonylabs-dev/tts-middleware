@@ -13,6 +13,8 @@ export {
   formatCharacterCount,
 } from './character-counter.utils';
 
+export { getMp3Duration } from './mp3-duration.utils';
+
 // Logger utilities
 export {
   setLogger,

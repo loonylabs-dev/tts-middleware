@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-01-29
+
+### Added
+- **Audio Duration Metadata:** New `metadata.audioDuration` field in `TTSResponse`
+  - Actual audio length in milliseconds, calculated by parsing MP3 frame headers from the audio buffer
+  - Supports all MPEG versions (1, 2, 2.5), all layers (1, 2, 3), VBR and CBR
+  - Zero external dependencies — pure TypeScript implementation (~130 lines)
+  - Returns `undefined` for non-MP3 formats (WAV, Opus, etc.)
+  - Handles ID3v2 and ID3v1 tags gracefully
+- **New Utility:** `getMp3Duration(buffer)` — standalone MP3 duration parser, exported for direct use
+- **New Tests:** 11 unit tests for MP3 duration parsing (invalid input, single/multi frame, ID3 tags, corrupt data)
+
+### Changed
+- **TTSResponseMetadata:** Clarified `duration` JSDoc as synthesis time (API call duration), added new optional `audioDuration` field
+- **All Providers:** Azure, EdenAI, Fish Audio, Google Cloud TTS now populate `audioDuration` automatically
+
 ## [0.6.0] - 2026-01-29
 
 ### Added

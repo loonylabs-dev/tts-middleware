@@ -205,10 +205,18 @@ export interface TTSResponseMetadata {
   voice: string;
 
   /**
-   * Audio duration in milliseconds
+   * Synthesis duration in milliseconds (how long the API call took)
    * @MVP ✅ Implemented
    */
   duration: number;
+
+  /**
+   * Actual audio duration in milliseconds (length of the audio file)
+   *
+   * @description Calculated by parsing MP3 frame headers from the audio buffer.
+   * Only available for MP3 format — `undefined` for other formats (WAV, OPUS, etc.).
+   */
+  audioDuration?: number;
 
   /**
    * Audio format of the output

@@ -10,6 +10,7 @@
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import type { TTSSynthesizeRequest, TTSResponse, AudioFormat } from '../types';
 import { TTSProvider } from '../types';
+import { getMp3Duration } from '../utils/mp3-duration.utils';
 import {
   BaseTTSProvider,
   InvalidConfigError,
@@ -203,6 +204,7 @@ export class AzureProvider extends BaseTTSProvider {
           provider: this.providerName,
           voice: voiceId,
           duration,
+          audioDuration: getMp3Duration(audioBuffer),
           audioFormat,
           sampleRate,
         },

@@ -82,7 +82,7 @@ const response = await ttsService.synthesize({
 
 fs.writeFileSync('output.mp3', response.audio);
 console.log('Characters billed:', response.billing.characters);
-console.log('Duration:', response.metadata.duration, 'ms');
+console.log('Audio length:', response.metadata.audioDuration, 'ms');
 ```
 
 <details>
@@ -334,7 +334,8 @@ interface TTSResponse {
   metadata: {
     provider: string;
     voice: string;
-    duration: number;
+    duration: number;        // Synthesis time (API call duration) in ms
+    audioDuration?: number;  // Actual audio length in ms (MP3 only)
     audioFormat: string;
     sampleRate: number;
   };
@@ -489,7 +490,7 @@ graph TD
 ## Testing
 
 ```bash
-# Run all tests (512 tests, >90% coverage)
+# Run all tests (523 tests, >90% coverage)
 npm test
 
 # Unit tests only

@@ -12,6 +12,7 @@
 
 import type { TTSSynthesizeRequest, TTSResponse } from '../types';
 import { TTSProvider } from '../types';
+import { getMp3Duration } from '../utils/mp3-duration.utils';
 import {
   BaseTTSProvider,
   InvalidConfigError,
@@ -140,6 +141,7 @@ export class FishAudioProvider extends BaseTTSProvider {
           provider: this.providerName,
           voice: voiceId,
           duration,
+          audioDuration: getMp3Duration(audioBuffer),
           audioFormat: request.audio?.format || 'mp3',
           sampleRate: request.audio?.sampleRate || 44100,
         },
