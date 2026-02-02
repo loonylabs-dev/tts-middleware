@@ -35,6 +35,7 @@ export type {
   DeepgramProviderOptions,
   EdenAIProviderOptions,
   FishAudioProviderOptions,
+  InworldProviderOptions,
   ProviderOptions,
 } from './provider-options.types';
 
@@ -47,6 +48,7 @@ export {
   isDeepgramOptions,
   isEdenAIOptions,
   isFishAudioOptions,
+  isInworldOptions,
 } from './provider-options.types';
 
 /**

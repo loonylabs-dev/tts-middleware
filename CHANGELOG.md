@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-02-02
+
+### Added
+- **Inworld AI TTS Provider:** New provider for Inworld AI's TTS 1.5 models (test/admin only)
+  - REST API integration via `POST https://api.inworld.ai/tts/v1/voice` (zero dependencies)
+  - 2 models: `inworld-tts-1.5-max` (expressive, ~200ms, $10/1M chars) and `inworld-tts-1.5-mini` (ultra-low latency ~120ms, $5/1M chars)
+  - 15 languages with instant voice cloning
+  - Audio formats: MP3 (default), LINEAR16, OGG_OPUS, ALAW, MULAW, FLAC
+  - Sample rates: 8000–48000 Hz (default 48000)
+  - Synthesis controls: `temperature`, `speakingRate`, `timestampType`, `applyTextNormalization`, `bitRate`
+  - Billing data from API response (`usage.processedCharactersCount`) with local fallback
+  - HTTP Basic authentication via base64-encoded API key
+  - **Note:** No EU data residency guarantees – intended for test/admin use only
+- **New Environment Variable:** `INWORLD_API_KEY` for Inworld AI API authentication
+- **New Types:** `InworldProviderOptions`, `isInworldOptions()` type guard
+- **New Tests:** 30 unit tests for Inworld AI provider
+
+### Changed
+- **TTSProvider enum:** Added `INWORLD = 'inworld'`
+- **ProviderOptions union:** Includes `InworldProviderOptions`
+
 ## [0.7.0] - 2026-01-29
 
 ### Added

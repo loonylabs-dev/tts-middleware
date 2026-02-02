@@ -623,6 +623,75 @@ export interface FishAudioProviderOptions {
 }
 
 /**
+ * Inworld AI TTS provider options
+ *
+ * @provider Inworld AI TTS API
+ * @description Inworld TTS 1.5 models with 15 language support and voice cloning.
+ * Test/Admin only – no EU data residency guarantees.
+ *
+ * @see https://docs.inworld.ai/docs/tts/tts
+ */
+export interface InworldProviderOptions {
+  /**
+   * TTS model to use
+   *
+   * @options
+   * - 'inworld-tts-1.5-max': Rich, expressive, ~200ms latency ($10/1M chars)
+   * - 'inworld-tts-1.5-mini': Ultra-low latency ~120ms ($5/1M chars)
+   *
+   * @default 'inworld-tts-1.5-max'
+   */
+  modelId?: 'inworld-tts-1.5-max' | 'inworld-tts-1.5-mini';
+
+  /**
+   * Controls randomness when sampling audio tokens
+   *
+   * @range 0 (exclusive) to 2 (inclusive)
+   * @default 1.1
+   */
+  temperature?: number;
+
+  /**
+   * Speaking rate multiplier
+   *
+   * @range 0.5 - 1.5
+   * @default 1.0
+   */
+  speakingRate?: number;
+
+  /**
+   * Audio encoding format
+   *
+   * @options 'LINEAR16', 'MP3', 'OGG_OPUS', 'ALAW', 'MULAW', 'FLAC'
+   * @default 'MP3'
+   */
+  audioEncoding?: 'LINEAR16' | 'MP3' | 'OGG_OPUS' | 'ALAW' | 'MULAW' | 'FLAC';
+
+  /**
+   * Bitrate in bits per second for compressed formats
+   *
+   * @default 128000
+   */
+  bitRate?: number;
+
+  /**
+   * Timestamp alignment type
+   *
+   * @options 'TIMESTAMP_TYPE_UNSPECIFIED', 'WORD', 'CHARACTER'
+   * @default 'TIMESTAMP_TYPE_UNSPECIFIED'
+   */
+  timestampType?: 'TIMESTAMP_TYPE_UNSPECIFIED' | 'WORD' | 'CHARACTER';
+
+  /**
+   * Text normalization control
+   *
+   * @options 'APPLY_TEXT_NORMALIZATION_UNSPECIFIED', 'ON', 'OFF'
+   * @default 'APPLY_TEXT_NORMALIZATION_UNSPECIFIED'
+   */
+  applyTextNormalization?: 'APPLY_TEXT_NORMALIZATION_UNSPECIFIED' | 'ON' | 'OFF';
+}
+
+/**
  * Union type of all provider options
  *
  * @description Use this type when you need to accept any provider options
@@ -634,7 +703,8 @@ export type ProviderOptions =
   | GoogleCloudTTSProviderOptions
   | DeepgramProviderOptions
   | EdenAIProviderOptions
-  | FishAudioProviderOptions;
+  | FishAudioProviderOptions
+  | InworldProviderOptions;
 
 /**
  * Type guard to check if options are for Azure
@@ -738,5 +808,22 @@ export function isFishAudioOptions(
       'topP' in options ||
       'repetitionPenalty' in options ||
       'chunkLength' in options)
+  );
+}
+
+/**
+ * Type guard to check if options are for Inworld AI
+ */
+export function isInworldOptions(
+  options: unknown
+): options is InworldProviderOptions {
+  return (
+    typeof options === 'object' &&
+    options !== null &&
+    ('modelId' in options ||
+      'speakingRate' in options ||
+      'timestampType' in options ||
+      'applyTextNormalization' in options ||
+      'audioEncoding' in options)
   );
 }

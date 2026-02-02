@@ -130,6 +130,19 @@ export interface FishAudioConfig {
 }
 
 /**
+ * Inworld AI Configuration
+ * Test/Admin only – no EU data residency guarantees.
+ */
+export interface InworldConfig {
+  /**
+   * Inworld AI API key
+   * @env INWORLD_API_KEY
+   * @required true
+   */
+  API_KEY: string;
+}
+
+/**
  * TTS Middleware Configuration Object
  */
 export interface TTSConfig {
@@ -159,6 +172,11 @@ export interface TTSConfig {
    * Fish Audio configuration (test/admin only)
    */
   FISH_AUDIO: FishAudioConfig;
+
+  /**
+   * Inworld AI configuration (test/admin only)
+   */
+  INWORLD: InworldConfig;
 
   /**
    * Enable debug logging
@@ -209,6 +227,7 @@ export function getTTSConfig(): TTSConfig {
   const googleRegion = (process.env.GOOGLE_TTS_REGION as GoogleCloudTTSRegion) || 'eu';
   const googleCredentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
   const fishAudioApiKey = process.env.FISH_AUDIO_API_KEY || '';
+  const inworldApiKey = process.env.INWORLD_API_KEY || '';
   const defaultProvider =
     (process.env.TTS_DEFAULT_PROVIDER as TTSProvider) || TTSProvider.AZURE;
   const debug = process.env.TTS_DEBUG === 'true';
@@ -257,6 +276,9 @@ export function getTTSConfig(): TTSConfig {
     },
     FISH_AUDIO: {
       API_KEY: fishAudioApiKey,
+    },
+    INWORLD: {
+      API_KEY: inworldApiKey,
     },
     DEBUG: debug,
     MAX_TEXT_LENGTH: 3000,
@@ -356,6 +378,15 @@ export function validateTTSConfig(config: TTSConfig): void {
     if (!config.FISH_AUDIO.API_KEY) {
       errors.push(
         'FISH_AUDIO_API_KEY is required when using Fish Audio provider (set in environment variable)'
+      );
+    }
+  }
+
+  // Validate Inworld AI configuration (if used as default provider)
+  if (config.DEFAULT_PROVIDER === TTSProvider.INWORLD) {
+    if (!config.INWORLD.API_KEY) {
+      errors.push(
+        'INWORLD_API_KEY is required when using Inworld AI provider (set in environment variable)'
       );
     }
   }
