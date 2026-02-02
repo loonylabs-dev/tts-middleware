@@ -269,35 +269,6 @@ export interface GoogleCloudTTSProviderOptions {
    */
   effectsProfileId?: string[];
 
-  /**
-   * Pitch adjustment in semitones
-   *
-   * @description Overrides the pitch parameter in AudioOptions if both are specified
-   *
-   * @range -20.0 to 20.0
-   * @default 0.0
-   */
-  pitchSemitones?: number;
-
-  /**
-   * Speaking rate multiplier
-   *
-   * @description Alternative to speed in AudioOptions
-   *
-   * @range 0.25 - 4.0
-   * @default 1.0
-   */
-  speakingRate?: number;
-
-  /**
-   * Volume gain in dB
-   *
-   * @description Alternative to volumeGainDb in AudioOptions
-   *
-   * @range -96.0 to 16.0
-   * @default 0.0
-   */
-  volumeGainDb?: number;
 }
 
 /**
@@ -453,36 +424,6 @@ export interface EdenAIProviderOptions {
   voice_id?: string;
 
   /**
-   * Speaking rate multiplier
-   *
-   * @description Controls the speed of speech synthesis
-   *
-   * @range 0.25 - 4.0
-   * @default 1.0
-   */
-  speaking_rate?: number;
-
-  /**
-   * Pitch adjustment in semitones
-   *
-   * @description Adjusts the pitch of the synthesized voice
-   *
-   * @range -20.0 to 20.0
-   * @default 0.0
-   */
-  speaking_pitch?: number;
-
-  /**
-   * Volume adjustment in decibels
-   *
-   * @description Adjusts the volume of the synthesized speech
-   *
-   * @range -96.0 to 16.0
-   * @default 0.0
-   */
-  speaking_volume?: number;
-
-  /**
    * Audio format override
    *
    * @description If not specified, uses the format from audio.format
@@ -560,14 +501,6 @@ export interface FishAudioProviderOptions {
   referenceId?: string;
 
   /**
-   * Controls expressiveness of the speech
-   *
-   * @range 0 - 1
-   * @default 0.7
-   */
-  temperature?: number;
-
-  /**
    * Controls diversity via nucleus sampling
    *
    * @range 0 - 1
@@ -642,22 +575,6 @@ export interface InworldProviderOptions {
    * @default 'inworld-tts-1.5-max'
    */
   modelId?: 'inworld-tts-1.5-max' | 'inworld-tts-1.5-mini';
-
-  /**
-   * Controls randomness when sampling audio tokens
-   *
-   * @range 0 (exclusive) to 2 (inclusive)
-   * @default 1.1
-   */
-  temperature?: number;
-
-  /**
-   * Speaking rate multiplier
-   *
-   * @range 0.5 - 1.5
-   * @default 1.0
-   */
-  speakingRate?: number;
 
   /**
    * Bitrate in bits per second for compressed formats
@@ -747,7 +664,7 @@ export function isGoogleCloudTTSOptions(
   return (
     typeof options === 'object' &&
     options !== null &&
-    ('effectsProfileId' in options || 'pitchSemitones' in options || 'region' in options)
+    ('effectsProfileId' in options || 'region' in options)
   );
 }
 
@@ -778,11 +695,10 @@ export function isEdenAIOptions(
   return (
     typeof options === 'object' &&
     options !== null &&
-    ('speaking_rate' in options ||
-      'speaking_pitch' in options ||
-      'speaking_volume' in options ||
-      'fallback_providers' in options ||
-      'webhook_url' in options)
+    ('fallback_providers' in options ||
+      'webhook_url' in options ||
+      'option' in options ||
+      'voice_id' in options)
   );
 }
 
@@ -796,7 +712,6 @@ export function isFishAudioOptions(
     typeof options === 'object' &&
     options !== null &&
     ('referenceId' in options ||
-      'temperature' in options ||
       'topP' in options ||
       'repetitionPenalty' in options ||
       'chunkLength' in options)
@@ -813,7 +728,6 @@ export function isInworldOptions(
     typeof options === 'object' &&
     options !== null &&
     ('modelId' in options ||
-      'speakingRate' in options ||
       'timestampType' in options ||
       'applyTextNormalization' in options)
   );

@@ -410,16 +410,14 @@ describe('Google Cloud TTS Integration Tests', () => {
       );
     });
 
-    test('applies provider-specific pitch setting', async () => {
+    test('applies pitch from audio options', async () => {
       const service = new TTSService();
 
       const request: TTSSynthesizeRequest = {
-        text: 'Pitch semitones test',
+        text: 'Pitch test',
         provider: TTSProvider.GOOGLE,
         voice: { id: 'en-US-Neural2-A' },
-        providerOptions: {
-          pitchSemitones: -5.0,
-        },
+        audio: { pitch: -5.0 },
       };
 
       await service.synthesize(request);
@@ -433,16 +431,14 @@ describe('Google Cloud TTS Integration Tests', () => {
       );
     });
 
-    test('applies provider-specific speaking rate', async () => {
+    test('applies speaking rate from audio options', async () => {
       const service = new TTSService();
 
       const request: TTSSynthesizeRequest = {
         text: 'Speaking rate test',
         provider: TTSProvider.GOOGLE,
         voice: { id: 'en-US-Neural2-A' },
-        providerOptions: {
-          speakingRate: 0.75,
-        },
+        audio: { speed: 0.75 },
       };
 
       await service.synthesize(request);
@@ -456,16 +452,14 @@ describe('Google Cloud TTS Integration Tests', () => {
       );
     });
 
-    test('applies volume gain', async () => {
+    test('applies volume gain from audio options', async () => {
       const service = new TTSService();
 
       const request: TTSSynthesizeRequest = {
         text: 'Volume gain test',
         provider: TTSProvider.GOOGLE,
         voice: { id: 'en-US-Neural2-A' },
-        providerOptions: {
-          volumeGainDb: 6.0,
-        },
+        audio: { volumeGainDb: 6.0 },
       };
 
       await service.synthesize(request);
@@ -639,6 +633,7 @@ describe('Google Cloud TTS Integration Tests', () => {
         text: 'Quota test',
         provider: TTSProvider.GOOGLE,
         voice: { id: 'en-US-Neural2-A' },
+        retry: false,
       };
 
       await expect(service.synthesize(request)).rejects.toThrow();

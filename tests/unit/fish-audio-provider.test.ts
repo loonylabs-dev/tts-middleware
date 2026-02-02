@@ -201,8 +201,8 @@ describe('FishAudioProvider', () => {
       const request: TTSSynthesizeRequest = {
         text: 'test',
         voice: { id: 'default' },
+        audio: { temperature: 0.5 },
         providerOptions: {
-          temperature: 0.5,
           topP: 0.8,
           repetitionPenalty: 1.5,
         },

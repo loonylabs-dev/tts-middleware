@@ -209,8 +209,8 @@ export class InworldProvider extends BaseTTSProvider {
     if (request.audio?.sampleRate) {
       audioConfig.sampleRateHertz = request.audio.sampleRate;
     }
-    if (options.speakingRate !== undefined || request.audio?.speed !== undefined) {
-      audioConfig.speakingRate = options.speakingRate ?? request.audio?.speed;
+    if (request.audio?.speed !== undefined) {
+      audioConfig.speakingRate = request.audio.speed;
     }
 
     if (Object.keys(audioConfig).length > 0) {
@@ -218,7 +218,7 @@ export class InworldProvider extends BaseTTSProvider {
     }
 
     // Synthesis parameters
-    if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (request.audio?.temperature !== undefined) body.temperature = request.audio.temperature;
     if (options.timestampType) body.timestampType = options.timestampType;
     if (options.applyTextNormalization) body.applyTextNormalization = options.applyTextNormalization;
 

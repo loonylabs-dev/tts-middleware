@@ -38,9 +38,9 @@ describe('TTSProvider enum', () => {
     expect(TTSProvider.FISH_AUDIO).toBe('fish_audio');
   });
 
-  test('has exactly 7 providers', () => {
+  test('has exactly 8 providers', () => {
     const providerKeys = Object.keys(TTSProvider);
-    expect(providerKeys).toHaveLength(7);
+    expect(providerKeys).toHaveLength(8);
   });
 
   test('enum values are lowercase strings', () => {
@@ -316,14 +316,12 @@ describe('Provider-specific options', () => {
       expect(options.effectsProfileId).toEqual(['headphone-class-device']);
     });
 
-    test('accepts pitch and volume adjustments', () => {
+    test('accepts region option', () => {
       const options: GoogleCloudProviderOptions = {
-        pitchSemitones: 2.0,
-        volumeGainDb: -5.0,
+        region: 'eu',
       };
 
-      expect(options.pitchSemitones).toBe(2.0);
-      expect(options.volumeGainDb).toBe(-5.0);
+      expect(options.region).toBe('eu');
     });
   });
 
@@ -421,8 +419,8 @@ describe('Type guards', () => {
       );
     });
 
-    test('returns true for Google options with pitchSemitones', () => {
-      expect(isGoogleCloudOptions({ pitchSemitones: 2.0 })).toBe(true);
+    test('returns true for Google options with region', () => {
+      expect(isGoogleCloudOptions({ region: 'eu' })).toBe(true);
     });
 
     test('returns false for non-Google options', () => {

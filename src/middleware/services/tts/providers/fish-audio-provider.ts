@@ -182,7 +182,7 @@ export class FishAudioProvider extends BaseTTSProvider {
     }
 
     // Quality parameters
-    if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (request.audio?.temperature !== undefined) body.temperature = request.audio.temperature;
     if (options.topP !== undefined) body.top_p = options.topP;
     if (options.repetitionPenalty !== undefined) body.repetition_penalty = options.repetitionPenalty;
 

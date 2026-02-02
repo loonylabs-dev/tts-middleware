@@ -431,22 +431,16 @@ export class GoogleCloudTTSProvider extends BaseTTSProvider {
     // Speaking rate (speed)
     if (request.audio?.speed !== undefined) {
       audioConfig.speakingRate = request.audio.speed;
-    } else if (options.speakingRate !== undefined) {
-      audioConfig.speakingRate = options.speakingRate;
     }
 
     // Pitch
     if (request.audio?.pitch !== undefined) {
       audioConfig.pitch = request.audio.pitch;
-    } else if (options.pitchSemitones !== undefined) {
-      audioConfig.pitch = options.pitchSemitones;
     }
 
     // Volume
     if (request.audio?.volumeGainDb !== undefined) {
       audioConfig.volumeGainDb = request.audio.volumeGainDb;
-    } else if (options.volumeGainDb !== undefined) {
-      audioConfig.volumeGainDb = options.volumeGainDb;
     }
 
     // Sample rate

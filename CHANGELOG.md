@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.0] - 2026-02-02
 
+### Breaking Changes
+- **Removed redundant provider-specific fields** — use generic `audio.*` options instead:
+  - Google Cloud: `providerOptions.speakingRate` → `audio.speed`
+  - Google Cloud: `providerOptions.pitchSemitones` → `audio.pitch`
+  - Google Cloud: `providerOptions.volumeGainDb` → `audio.volumeGainDb`
+  - Inworld: `providerOptions.speakingRate` → `audio.speed`
+  - Inworld: `providerOptions.temperature` → `audio.temperature`
+  - Fish Audio: `providerOptions.temperature` → `audio.temperature`
+  - EdenAI: Removed dead code fields `speaking_rate`, `speaking_pitch`, `speaking_volume` (were never read)
+
 ### Added
 - **Inworld AI TTS Provider:** New provider for Inworld AI's TTS 1.5 models (test/admin only)
   - REST API integration via `POST https://api.inworld.ai/tts/v1/voice` (zero dependencies)
@@ -14,17 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 15 languages with instant voice cloning
   - Audio formats: MP3 (default), LINEAR16, OGG_OPUS, ALAW, MULAW, FLAC
   - Sample rates: 8000–48000 Hz (default 48000)
-  - Synthesis controls: `temperature`, `speakingRate`, `timestampType`, `applyTextNormalization`, `bitRate`
+  - Synthesis controls: `temperature`, `timestampType`, `applyTextNormalization`, `bitRate`
   - Billing data from API response (`usage.processedCharactersCount`) with local fallback
   - HTTP Basic authentication via base64-encoded API key
   - **Note:** No EU data residency guarantees – intended for test/admin use only
 - **New Environment Variable:** `INWORLD_API_KEY` for Inworld AI API authentication
 - **New Types:** `InworldProviderOptions`, `isInworldOptions()` type guard
 - **New Tests:** 30 unit tests for Inworld AI provider
+- **`AudioOptions.temperature`**: Generic temperature field (range 0–2) for controlling expressiveness
+  - Supported by Fish Audio and Inworld AI providers
+  - Providers clamp to their supported range internally
 
 ### Changed
 - **TTSProvider enum:** Added `INWORLD = 'inworld'`
 - **ProviderOptions union:** Includes `InworldProviderOptions`
+- **`AudioOptions.speed`**: Extended range from 0.5–2.0 to 0.25–4.0
+- **Type guards**: Updated `isGoogleCloudTTSOptions`, `isEdenAIOptions`, `isFishAudioOptions`, `isInworldOptions` to reflect removed fields
 
 ## [0.7.0] - 2026-01-29
 

@@ -51,7 +51,7 @@ export interface AudioOptions {
   /**
    * Speech speed multiplier
    * @MVP ✅ Implemented (Azure)
-   * @range 0.5 - 2.0
+   * @range 0.25 - 4.0
    * @default 1.0
    * @providers All providers support this
    */
@@ -72,6 +72,14 @@ export interface AudioOptions {
    * @default 0
    */
   volumeGainDb?: number;
+
+  /**
+   * Temperature for controlling randomness/expressiveness
+   * @range 0 - 2 (providers clamp to their supported range internally)
+   * @default Provider-dependent
+   * @providers Fish Audio, Inworld AI
+   */
+  temperature?: number;
 
   /**
    * Audio sample rate in Hz

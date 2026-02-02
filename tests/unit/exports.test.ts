@@ -225,7 +225,7 @@ describe('Public API Exports', () => {
       expect(isGoogleCloudOptions).toBeDefined();
       expect(typeof isGoogleCloudOptions).toBe('function');
 
-      const googleOpts: GoogleCloudProviderOptions = { pitchSemitones: 0.0 };
+      const googleOpts: GoogleCloudProviderOptions = { region: 'eu' };
       expect(isGoogleCloudOptions(googleOpts)).toBe(true);
       expect(isGoogleCloudOptions({})).toBe(false);
     });
@@ -387,12 +387,10 @@ describe('Public API Exports', () => {
 
     test('GoogleCloudProviderOptions type is available', () => {
       const opts: GoogleCloudProviderOptions = {
-        pitchSemitones: 0.0,
-        speakingRate: 1.0,
-        volumeGainDb: 0.0,
+        region: 'eu',
         effectsProfileId: ['headphone-class-device'],
       };
-      expect(opts.pitchSemitones).toBe(0.0);
+      expect(opts.region).toBe('eu');
     });
 
     test('DeepgramProviderOptions type is available', () => {

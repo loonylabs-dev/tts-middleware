@@ -201,12 +201,12 @@ describe('InworldProvider', () => {
       expect(body.modelId).toBe('inworld-tts-1.5-mini');
     });
 
-    test('sends temperature parameter', async () => {
+    test('sends temperature from audio options', async () => {
       const provider = new InworldProvider();
       const request: TTSSynthesizeRequest = {
         text: 'test',
         voice: { id: 'Ashley' },
-        providerOptions: { temperature: 0.8 },
+        audio: { temperature: 0.8 },
       };
 
       await provider.synthesize('test', 'Ashley', request);
@@ -215,47 +215,18 @@ describe('InworldProvider', () => {
       expect(body.temperature).toBe(0.8);
     });
 
-    test('sends speakingRate in audioConfig', async () => {
+    test('maps audio.speed to audioConfig.speakingRate', async () => {
       const provider = new InworldProvider();
       const request: TTSSynthesizeRequest = {
         text: 'test',
         voice: { id: 'Ashley' },
-        providerOptions: { speakingRate: 1.3 },
+        audio: { speed: 1.3 },
       };
 
       await provider.synthesize('test', 'Ashley', request);
 
       const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
       expect(body.audioConfig.speakingRate).toBe(1.3);
-    });
-
-    test('maps audio.speed to audioConfig.speakingRate as fallback', async () => {
-      const provider = new InworldProvider();
-      const request: TTSSynthesizeRequest = {
-        text: 'test',
-        voice: { id: 'Ashley' },
-        audio: { speed: 0.8 },
-      };
-
-      await provider.synthesize('test', 'Ashley', request);
-
-      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
-      expect(body.audioConfig.speakingRate).toBe(0.8);
-    });
-
-    test('providerOptions.speakingRate takes priority over audio.speed', async () => {
-      const provider = new InworldProvider();
-      const request: TTSSynthesizeRequest = {
-        text: 'test',
-        voice: { id: 'Ashley' },
-        audio: { speed: 0.8 },
-        providerOptions: { speakingRate: 1.2 },
-      };
-
-      await provider.synthesize('test', 'Ashley', request);
-
-      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
-      expect(body.audioConfig.speakingRate).toBe(1.2);
     });
 
     test('maps audio.format to Inworld audioEncoding in audioConfig', async () => {
