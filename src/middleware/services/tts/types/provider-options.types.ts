@@ -660,14 +660,6 @@ export interface InworldProviderOptions {
   speakingRate?: number;
 
   /**
-   * Audio encoding format
-   *
-   * @options 'LINEAR16', 'MP3', 'OGG_OPUS', 'ALAW', 'MULAW', 'FLAC'
-   * @default 'MP3'
-   */
-  audioEncoding?: 'LINEAR16' | 'MP3' | 'OGG_OPUS' | 'ALAW' | 'MULAW' | 'FLAC';
-
-  /**
    * Bitrate in bits per second for compressed formats
    *
    * @default 128000
@@ -823,7 +815,6 @@ export function isInworldOptions(
     ('modelId' in options ||
       'speakingRate' in options ||
       'timestampType' in options ||
-      'applyTextNormalization' in options ||
-      'audioEncoding' in options)
+      'applyTextNormalization' in options)
   );
 }

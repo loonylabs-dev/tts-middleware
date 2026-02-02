@@ -125,7 +125,7 @@ export class InworldProvider extends BaseTTSProvider {
     try {
       const { audioBuffer, processedCharacters } = await this.callAPI(requestBody);
       const duration = Date.now() - startTime;
-      const audioFormat = this.resolveAudioFormat(request, options);
+      const audioFormat = request.audio?.format || 'mp3';
       const characters = processedCharacters ?? this.countCharacters(text);
 
       this.log('info', 'Synthesis successful', {
@@ -164,22 +164,21 @@ export class InworldProvider extends BaseTTSProvider {
    *
    * @private
    */
-  private resolveAudioFormat(
-    request: TTSSynthesizeRequest,
-    options: InworldProviderOptions
-  ): string {
-    if (options.audioEncoding) {
-      const encodingMap: Record<string, string> = {
-        MP3: 'mp3',
-        LINEAR16: 'wav',
-        OGG_OPUS: 'opus',
-        ALAW: 'alaw',
-        MULAW: 'mulaw',
-        FLAC: 'flac',
-      };
-      return encodingMap[options.audioEncoding] || 'mp3';
-    }
-    return request.audio?.format || 'mp3';
+  /**
+   * Map middleware audio format to Inworld API audioEncoding
+   *
+   * @private
+   */
+  private mapFormatToEncoding(format: string): string {
+    const formatMap: Record<string, string> = {
+      mp3: 'MP3',
+      wav: 'LINEAR16',
+      opus: 'OGG_OPUS',
+      alaw: 'ALAW',
+      mulaw: 'MULAW',
+      flac: 'FLAC',
+    };
+    return formatMap[format] || 'MP3';
   }
 
   /**
@@ -201,8 +200,8 @@ export class InworldProvider extends BaseTTSProvider {
 
     // Audio config
     const audioConfig: Record<string, unknown> = {};
-    if (options.audioEncoding) {
-      audioConfig.audioEncoding = options.audioEncoding;
+    if (request.audio?.format) {
+      audioConfig.audioEncoding = this.mapFormatToEncoding(request.audio.format);
     }
     if (options.bitRate !== undefined) {
       audioConfig.bitRate = options.bitRate;

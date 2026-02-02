@@ -8,7 +8,11 @@
 import type { TTSSynthesizeRequest } from '../../src/middleware/services/tts/types';
 import { TTSProvider } from '../../src/middleware/services/tts/types';
 import { InworldProvider } from '../../src/middleware/services/tts/providers/inworld-provider';
-import { InvalidConfigError } from '../../src/middleware/services/tts/providers/base-tts-provider';
+import {
+  InvalidConfigError,
+  QuotaExceededError,
+  SynthesisFailedError,
+} from '../../src/middleware/services/tts/providers/base-tts-provider';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -254,12 +258,12 @@ describe('InworldProvider', () => {
       expect(body.audioConfig.speakingRate).toBe(1.2);
     });
 
-    test('sends audioEncoding in audioConfig', async () => {
+    test('maps audio.format to Inworld audioEncoding in audioConfig', async () => {
       const provider = new InworldProvider();
       const request: TTSSynthesizeRequest = {
         text: 'test',
         voice: { id: 'Ashley' },
-        providerOptions: { audioEncoding: 'OGG_OPUS' },
+        audio: { format: 'opus' },
       };
 
       await provider.synthesize('test', 'Ashley', request);
@@ -268,12 +272,40 @@ describe('InworldProvider', () => {
       expect(body.audioConfig.audioEncoding).toBe('OGG_OPUS');
     });
 
-    test('resolves audio format from audioEncoding option', async () => {
+    test('maps audio.format wav to LINEAR16', async () => {
       const provider = new InworldProvider();
       const request: TTSSynthesizeRequest = {
         text: 'test',
         voice: { id: 'Ashley' },
-        providerOptions: { audioEncoding: 'OGG_OPUS' },
+        audio: { format: 'wav' },
+      };
+
+      await provider.synthesize('test', 'Ashley', request);
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      expect(body.audioConfig.audioEncoding).toBe('LINEAR16');
+    });
+
+    test('maps audio.format flac to FLAC', async () => {
+      const provider = new InworldProvider();
+      const request: TTSSynthesizeRequest = {
+        text: 'test',
+        voice: { id: 'Ashley' },
+        audio: { format: 'flac' },
+      };
+
+      await provider.synthesize('test', 'Ashley', request);
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      expect(body.audioConfig.audioEncoding).toBe('FLAC');
+    });
+
+    test('reports audioFormat from request.audio.format', async () => {
+      const provider = new InworldProvider();
+      const request: TTSSynthesizeRequest = {
+        text: 'test',
+        voice: { id: 'Ashley' },
+        audio: { format: 'opus' },
       };
 
       const result = await provider.synthesize('test', 'Ashley', request);
@@ -395,6 +427,33 @@ describe('InworldProvider', () => {
     });
   });
 
+  describe('Synthesize - Audio Duration', () => {
+    test('audioDuration is undefined for non-mp3 formats', async () => {
+      const provider = new InworldProvider();
+      const request: TTSSynthesizeRequest = {
+        text: 'test',
+        voice: { id: 'Ashley' },
+        audio: { format: 'opus' },
+      };
+
+      const result = await provider.synthesize('test', 'Ashley', request);
+      expect(result.metadata.audioDuration).toBeUndefined();
+    });
+
+    test('audioDuration is computed for mp3 format', async () => {
+      const provider = new InworldProvider();
+      const request: TTSSynthesizeRequest = {
+        text: 'test',
+        voice: { id: 'Ashley' },
+        audio: { format: 'mp3' },
+      };
+
+      const result = await provider.synthesize('test', 'Ashley', request);
+      // Mock buffer has no valid MP3 frames, so getMp3Duration returns undefined
+      expect(result.metadata).toHaveProperty('audioDuration');
+    });
+  });
+
   describe('Synthesize - Error Handling', () => {
     test('throws on API error response', async () => {
       (fetch as jest.Mock).mockResolvedValue({
@@ -414,7 +473,23 @@ describe('InworldProvider', () => {
       );
     });
 
-    test('throws on 429 rate limit', async () => {
+    test('throws InvalidConfigError on 403', async () => {
+      (fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 403,
+        text: async () => 'Forbidden',
+      });
+
+      const provider = new InworldProvider();
+      const request: TTSSynthesizeRequest = {
+        text: 'test',
+        voice: { id: 'Ashley' },
+      };
+
+      await expect(provider.synthesize('test', 'Ashley', request)).rejects.toThrow(InvalidConfigError);
+    });
+
+    test('throws QuotaExceededError on 429', async () => {
       (fetch as jest.Mock).mockResolvedValue({
         ok: false,
         status: 429,
@@ -427,11 +502,11 @@ describe('InworldProvider', () => {
         voice: { id: 'Ashley' },
       };
 
-      await expect(provider.synthesize('test', 'Ashley', request)).rejects.toThrow();
+      await expect(provider.synthesize('test', 'Ashley', request)).rejects.toThrow(QuotaExceededError);
     });
 
-    test('throws on network error', async () => {
-      (fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+    test('throws SynthesisFailedError on unknown errors', async () => {
+      (fetch as jest.Mock).mockRejectedValue(new Error('Something unexpected'));
 
       const provider = new InworldProvider();
       const request: TTSSynthesizeRequest = {
@@ -439,7 +514,7 @@ describe('InworldProvider', () => {
         voice: { id: 'Ashley' },
       };
 
-      await expect(provider.synthesize('test', 'Ashley', request)).rejects.toThrow();
+      await expect(provider.synthesize('test', 'Ashley', request)).rejects.toThrow(SynthesisFailedError);
     });
 
     test('logs error on failure', async () => {

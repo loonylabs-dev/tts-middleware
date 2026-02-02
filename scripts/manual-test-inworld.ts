@@ -143,14 +143,15 @@ async function main() {
       'inworld-en-ashley-max-fast.mp3'
     );
 
-    // OGG_OPUS format test
+    // Opus format test (via audio.format)
     await runSynthesisTest(
-      'English (Ashley, Max, OGG_OPUS)',
+      'English (Ashley, Max, Opus)',
       {
-        text: 'Testing OGG Opus audio format output.',
+        text: 'Testing Opus audio format output.',
         provider: TTSProvider.INWORLD,
         voice: { id: 'Ashley' },
-        providerOptions: { modelId: 'inworld-tts-1.5-max', audioEncoding: 'OGG_OPUS' },
+        audio: { format: 'opus' },
+        providerOptions: { modelId: 'inworld-tts-1.5-max' },
       },
       'inworld-en-ashley-max-opus.ogg'
     );

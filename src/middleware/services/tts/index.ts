@@ -45,6 +45,7 @@ export type {
   GoogleCloudTTSProviderOptions,
   DeepgramProviderOptions,
   EdenAIProviderOptions,
+  FishAudioProviderOptions,
   InworldProviderOptions,
   ProviderOptions,
 } from './types';
@@ -57,6 +58,7 @@ export {
   isGoogleCloudTTSOptions,
   isDeepgramOptions,
   isEdenAIOptions,
+  isFishAudioOptions,
   isInworldOptions,
 } from './types';
 
@@ -65,6 +67,7 @@ export {
   BaseTTSProvider,
   AzureProvider,
   EdenAIProvider,
+  FishAudioProvider,
   GoogleCloudTTSProvider,
   InworldProvider,
 } from './providers';
