@@ -14,6 +14,7 @@ import { AzureProvider } from './providers/azure-provider';
 import { EdenAIProvider } from './providers/edenai-provider';
 import { GoogleCloudTTSProvider } from './providers/google-cloud-tts-provider';
 import { FishAudioProvider } from './providers/fish-audio-provider';
+import { InworldProvider } from './providers/inworld-provider';
 import {
   executeWithRetry,
   DEFAULT_RETRY_CONFIG,
@@ -131,6 +132,18 @@ export class TTSService {
       });
     }
 
+    try {
+      // Initialize Inworld AI provider (test/admin only)
+      const inworldProvider = new InworldProvider();
+      this.providers.set(TTSProvider.INWORLD, inworldProvider);
+
+      this.log('debug', 'Inworld AI provider initialized');
+    } catch (error) {
+      this.log('warn', 'Failed to initialize Inworld AI provider', {
+        error: (error as Error).message,
+      });
+    }
+
     // Future providers will be initialized here:
     // try {
     //   const openaiProvider = new OpenAIProvider();
@@ -161,6 +174,7 @@ export class TTSService {
       google: TTSProvider.GOOGLE,
       deepgram: TTSProvider.DEEPGRAM,
       fish_audio: TTSProvider.FISH_AUDIO,
+      inworld: TTSProvider.INWORLD,
     };
 
     return providerMap[normalized];

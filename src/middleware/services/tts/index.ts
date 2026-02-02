@@ -45,6 +45,7 @@ export type {
   GoogleCloudTTSProviderOptions,
   DeepgramProviderOptions,
   EdenAIProviderOptions,
+  InworldProviderOptions,
   ProviderOptions,
 } from './types';
 
@@ -56,6 +57,7 @@ export {
   isGoogleCloudTTSOptions,
   isDeepgramOptions,
   isEdenAIOptions,
+  isInworldOptions,
 } from './types';
 
 // ===== Providers =====
@@ -64,6 +66,7 @@ export {
   AzureProvider,
   EdenAIProvider,
   GoogleCloudTTSProvider,
+  InworldProvider,
 } from './providers';
 
 export type {

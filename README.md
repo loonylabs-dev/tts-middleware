@@ -2,7 +2,7 @@
 
 # TTS Middleware
 
-*Provider-agnostic Text-to-Speech middleware with **GDPR compliance** support. Currently supports Azure Speech Services, EdenAI, Google Cloud TTS, and Fish Audio. Features EU data residency via Azure and Google Cloud, pluggable logging, character-based billing, and comprehensive error handling.*
+*Provider-agnostic Text-to-Speech middleware with **GDPR compliance** support. Currently supports Azure Speech Services, EdenAI, Google Cloud TTS, Fish Audio, and Inworld AI. Features EU data residency via Azure and Google Cloud, pluggable logging, character-based billing, and comprehensive error handling.*
 
 <!-- Horizontal Badge Navigation Bar -->
 [![npm version](https://img.shields.io/npm/v/@loonylabs/tts-middleware.svg?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@loonylabs/tts-middleware)
@@ -42,6 +42,7 @@
   - **EdenAI**: Aggregator with access to Google, OpenAI, Amazon, IBM, ElevenLabs
   - **Google Cloud TTS**: Neural2, WaveNet, Studio voices with EU data residency
   - **Fish Audio**: S1 model with 13 languages & 64+ emotions (test/admin only)
+  - **Inworld AI**: TTS 1.5 Max/Mini with 15 languages & voice cloning (test/admin only)
   - **Ready for:** OpenAI, ElevenLabs, Deepgram (interfaces prepared)
 - **GDPR/DSGVO Compliance**: Built-in EU region support for Azure and Google Cloud
 - **SSML Abstraction**: Auto-generates provider-specific SSML from simple JSON options
@@ -127,6 +128,14 @@ const fish = await ttsService.synthesize({
   provider: TTSProvider.FISH_AUDIO,
   voice: { id: '90042f762dbf49baa2e7776d011eee6b' },
   providerOptions: { model: 's1' },
+});
+
+// Inworld AI (test/admin only)
+const inworld = await ttsService.synthesize({
+  text: 'Hello from Inworld AI!',
+  provider: TTSProvider.INWORLD,
+  voice: { id: 'Ashley' },
+  providerOptions: { modelId: 'inworld-tts-1.5-max', temperature: 1.1 },
 });
 ```
 
@@ -228,6 +237,9 @@ GOOGLE_TTS_REGION=eu
 # Fish Audio (test/admin only – no EU data residency)
 FISH_AUDIO_API_KEY=your-fish-audio-api-key
 
+# Inworld AI (test/admin only – no EU data residency)
+INWORLD_API_KEY=your-inworld-api-key
+
 # Logging
 TTS_DEBUG=false
 LOG_LEVEL=info
@@ -280,6 +292,18 @@ LOG_LEVEL=info
 | **Pricing** | $15/1M UTF-8 bytes |
 | **EU Compliance** | No data residency guarantees |
 
+### Inworld AI (Test/Admin Only)
+
+| Feature | Details |
+|---------|---------|
+| **Models** | TTS 1.5 Max (~200ms latency), TTS 1.5 Mini (~120ms latency) |
+| **Languages** | 15 languages |
+| **Voices** | Instant voice cloning + professional voice cloning |
+| **Audio** | MP3, LINEAR16, OGG_OPUS, ALAW, MULAW, FLAC |
+| **Controls** | temperature, speakingRate, timestamps, text normalization |
+| **Pricing** | $10/1M chars (Max), $5/1M chars (Mini) |
+| **EU Compliance** | No data residency guarantees |
+
 ## GDPR / Compliance
 
 ### Provider Compliance Overview
@@ -290,6 +314,7 @@ LOG_LEVEL=info
 | **Google Cloud** | Yes | Yes | Yes (EU multi-region) | Full EU endpoint support |
 | **EdenAI** | Yes | Depends* | Depends* | Depends on underlying provider |
 | **Fish Audio** | No | No | No | Test/admin only |
+| **Inworld AI** | No | No | No | Test/admin only |
 
 *EdenAI is an aggregator - compliance depends on the underlying provider.
 
@@ -457,6 +482,7 @@ const PROVIDER_RATES = {
   [TTSProvider.AZURE]: 16 / 1_000_000,
   [TTSProvider.GOOGLE]: 16 / 1_000_000,
   [TTSProvider.FISH_AUDIO]: 15 / 1_000_000,
+  [TTSProvider.INWORLD]: 10 / 1_000_000, // Max model; Mini: $5/1M
 };
 
 const response = await ttsService.synthesize({ /* ... */ });
@@ -476,11 +502,13 @@ graph TD
     Registry -->|Select| GCloud[GoogleCloudTTSProvider]
     Registry -->|Select| Eden[EdenAIProvider]
     Registry -->|Select| Fish[FishAudioProvider]
+    Registry -->|Select| Inworld[InworldProvider]
 
     Azure -->|SSML/SDK| AzureAPI[Azure Speech API]
     GCloud -->|gRPC/SDK| GoogleAPI[Google Cloud TTS API]
     Eden -->|REST| EdenAPI[EdenAI API]
     Fish -->|REST| FishAPI[Fish Audio API]
+    Inworld -->|REST| InworldAPI[Inworld AI API]
 
     GoogleAPI -->|EU Endpoint| EU[eu-texttospeech.googleapis.com]
     EdenAPI -.-> OpenAI[OpenAI TTS]
@@ -490,7 +518,7 @@ graph TD
 ## Testing
 
 ```bash
-# Run all tests (523 tests, >90% coverage)
+# Run all tests (555 tests, >90% coverage)
 npm test
 
 # Unit tests only
