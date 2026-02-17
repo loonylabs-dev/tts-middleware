@@ -260,7 +260,7 @@ describe('GeminiProvider', () => {
 
       const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
       expect(body).toEqual({
-        contents: [{ parts: [{ text: 'Hello World' }] }],
+        contents: [{ role: 'user', parts: [{ text: 'Hello World' }] }],
         generationConfig: {
           responseModalities: ['AUDIO'],
           speechConfig: {
