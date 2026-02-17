@@ -38,9 +38,9 @@ describe('TTSProvider enum', () => {
     expect(TTSProvider.FISH_AUDIO).toBe('fish_audio');
   });
 
-  test('has exactly 8 providers', () => {
+  test('has exactly 9 providers', () => {
     const providerKeys = Object.keys(TTSProvider);
-    expect(providerKeys).toHaveLength(8);
+    expect(providerKeys).toHaveLength(9);
   });
 
   test('enum values are lowercase strings', () => {

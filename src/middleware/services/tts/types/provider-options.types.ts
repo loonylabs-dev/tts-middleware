@@ -601,6 +601,41 @@ export interface InworldProviderOptions {
 }
 
 /**
+ * Gemini TTS provider options
+ *
+ * @provider Gemini TTS API (Google AI)
+ * @description Gemini 2.5 TTS models using the generateContent endpoint with audio output.
+ * Supports 30 voices with 90+ languages (auto-detect). Style control via natural language prompts.
+ * Test/Admin only – no EU data residency guarantees.
+ *
+ * @see https://ai.google.dev/gemini-api/docs/text-to-speech
+ */
+export interface GeminiProviderOptions {
+  /**
+   * TTS model to use
+   *
+   * @options
+   * - 'gemini-2.5-flash-preview-tts': Budget, fast ($0.50/M input + $10/M audio output tokens)
+   * - 'gemini-2.5-pro-preview-tts': Premium, natural ($1.00/M input + $20/M audio output tokens)
+   *
+   * @default 'gemini-2.5-flash-preview-tts'
+   */
+  model?: 'gemini-2.5-flash-preview-tts' | 'gemini-2.5-pro-preview-tts';
+
+  /**
+   * Natural language style instruction prepended to the text
+   *
+   * @description Controls voice style/emotion via prompt engineering.
+   * The instruction is prepended to the synthesis text, e.g. "Say cheerfully: {text}".
+   *
+   * @example 'Say in a spooky whisper:'
+   * @example 'Read this cheerfully:'
+   * @example 'Speak in a calm, professional tone:'
+   */
+  stylePrompt?: string;
+}
+
+/**
  * Union type of all provider options
  *
  * @description Use this type when you need to accept any provider options
@@ -613,7 +648,8 @@ export type ProviderOptions =
   | DeepgramProviderOptions
   | EdenAIProviderOptions
   | FishAudioProviderOptions
-  | InworldProviderOptions;
+  | InworldProviderOptions
+  | GeminiProviderOptions;
 
 /**
  * Type guard to check if options are for Azure
@@ -730,5 +766,21 @@ export function isInworldOptions(
     ('modelId' in options ||
       'timestampType' in options ||
       'applyTextNormalization' in options)
+  );
+}
+
+/**
+ * Type guard to check if options are for Gemini TTS
+ */
+export function isGeminiOptions(
+  options: unknown
+): options is GeminiProviderOptions {
+  return (
+    typeof options === 'object' &&
+    options !== null &&
+    ('stylePrompt' in options ||
+      ('model' in options &&
+        typeof (options as { model: unknown }).model === 'string' &&
+        (options as { model: string }).model.startsWith('gemini-')))
   );
 }

@@ -36,6 +36,7 @@ export type {
   EdenAIProviderOptions,
   FishAudioProviderOptions,
   InworldProviderOptions,
+  GeminiProviderOptions,
   ProviderOptions,
 } from './provider-options.types';
 
@@ -49,6 +50,7 @@ export {
   isEdenAIOptions,
   isFishAudioOptions,
   isInworldOptions,
+  isGeminiOptions,
 } from './provider-options.types';
 
 /**

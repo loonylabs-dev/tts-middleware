@@ -47,6 +47,7 @@ export type {
   EdenAIProviderOptions,
   FishAudioProviderOptions,
   InworldProviderOptions,
+  GeminiProviderOptions,
   ProviderOptions,
 } from './types';
 
@@ -60,6 +61,7 @@ export {
   isEdenAIOptions,
   isFishAudioOptions,
   isInworldOptions,
+  isGeminiOptions,
 } from './types';
 
 // ===== Providers =====
@@ -70,6 +72,7 @@ export {
   FishAudioProvider,
   GoogleCloudTTSProvider,
   InworldProvider,
+  GeminiProvider,
 } from './providers';
 
 export type {

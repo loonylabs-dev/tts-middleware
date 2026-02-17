@@ -143,6 +143,20 @@ export interface InworldConfig {
 }
 
 /**
+ * Gemini TTS Configuration (via Vertex AI)
+ * Reuses Google Cloud credentials (GOOGLE_APPLICATION_CREDENTIALS).
+ * Test/Admin only – no EU data residency guarantees.
+ */
+export interface GeminiConfig {
+  /**
+   * Vertex AI region for Gemini TTS
+   * @env GEMINI_REGION
+   * @default 'us-central1'
+   */
+  REGION: string;
+}
+
+/**
  * TTS Middleware Configuration Object
  */
 export interface TTSConfig {
@@ -177,6 +191,11 @@ export interface TTSConfig {
    * Inworld AI configuration (test/admin only)
    */
   INWORLD: InworldConfig;
+
+  /**
+   * Gemini TTS configuration (test/admin only)
+   */
+  GEMINI: GeminiConfig;
 
   /**
    * Enable debug logging
@@ -228,6 +247,7 @@ export function getTTSConfig(): TTSConfig {
   const googleCredentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
   const fishAudioApiKey = process.env.FISH_AUDIO_API_KEY || '';
   const inworldApiKey = process.env.INWORLD_API_KEY || '';
+  const geminiRegion = process.env.GEMINI_REGION || 'us-central1';
   const defaultProvider =
     (process.env.TTS_DEFAULT_PROVIDER as TTSProvider) || TTSProvider.AZURE;
   const debug = process.env.TTS_DEBUG === 'true';
@@ -279,6 +299,9 @@ export function getTTSConfig(): TTSConfig {
     },
     INWORLD: {
       API_KEY: inworldApiKey,
+    },
+    GEMINI: {
+      REGION: geminiRegion,
     },
     DEBUG: debug,
     MAX_TEXT_LENGTH: 3000,
@@ -387,6 +410,21 @@ export function validateTTSConfig(config: TTSConfig): void {
     if (!config.INWORLD.API_KEY) {
       errors.push(
         'INWORLD_API_KEY is required when using Inworld AI provider (set in environment variable)'
+      );
+    }
+  }
+
+  // Validate Gemini TTS configuration (if used as default provider)
+  // Gemini reuses Google Cloud credentials (GOOGLE_APPLICATION_CREDENTIALS + GOOGLE_CLOUD_PROJECT)
+  if (config.DEFAULT_PROVIDER === TTSProvider.GEMINI) {
+    if (!config.GOOGLE.CREDENTIALS_PATH) {
+      errors.push(
+        'GOOGLE_APPLICATION_CREDENTIALS is required when using Gemini TTS provider (set in environment variable)'
+      );
+    }
+    if (!config.GOOGLE.PROJECT_ID) {
+      errors.push(
+        'GOOGLE_CLOUD_PROJECT is required when using Gemini TTS provider (set in environment variable)'
       );
     }
   }

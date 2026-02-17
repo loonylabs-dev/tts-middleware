@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-02-17
+
+### Added
+- **Gemini TTS Provider:** New provider for Google Gemini TTS via Vertex AI (test/admin only)
+  - Uses Vertex AI `generateContent` endpoint with `responseModalities: ['AUDIO']`
+  - Service Account authentication (reuses `GOOGLE_APPLICATION_CREDENTIALS` + `GOOGLE_CLOUD_PROJECT`)
+  - 2 models: `gemini-2.5-flash-preview-tts` (budget, $0.50/M input + $10/M audio output tokens) and `gemini-2.5-pro-preview-tts` (premium, $1.00/M input + $20/M audio output tokens)
+  - 30 multilingual voices with auto-detect language (90+ languages)
+  - Natural language style control via `stylePrompt` option (e.g. "Say cheerfully:", "Read in a spooky whisper:")
+  - PCM-to-MP3 conversion via ffmpeg (child_process) with automatic WAV fallback if ffmpeg unavailable
+  - **Note:** No EU data residency guarantees – intended for test/admin use only
+- **New Environment Variable:** `GEMINI_REGION` for Vertex AI region (default: `us-central1`)
+- **New Types:** `GeminiProviderOptions`, `isGeminiOptions()` type guard
+- **New Tests:** 32 unit tests for Gemini TTS provider
+- **Manual Test Script:** `scripts/manual-test-gemini.ts` with German and English voice tests
+
+### Changed
+- **TTSProvider enum:** Added `GEMINI = 'gemini'`
+- **ProviderOptions union:** Includes `GeminiProviderOptions`
+
 ## [0.8.0] - 2026-02-02
 
 ### Breaking Changes
