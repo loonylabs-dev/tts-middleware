@@ -26,6 +26,7 @@ export enum TTSProvider {
   DEEPGRAM = 'deepgram',
   FISH_AUDIO = 'fish_audio',
   INWORLD = 'inworld',
+  GEMINI = 'gemini',
 }
 
 /**
