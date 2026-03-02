@@ -207,6 +207,46 @@ export interface ElevenLabsProviderOptions {
 }
 
 /**
+ * Region rotation configuration for Vertex AI quota management
+ *
+ * @description When a 429 quota error occurs, the provider automatically retries
+ * with the next region in the list. Same pattern as llm-middleware and tti-middleware.
+ *
+ * @example
+ * ```typescript
+ * {
+ *   regions: ['europe-west4', 'europe-west1', 'europe-west3'],
+ *   fallback: 'us-central1',
+ * }
+ * ```
+ */
+export interface RegionRotationConfig {
+  /**
+   * Ordered list of regions to try on quota errors (429 / Resource Exhausted)
+   *
+   * @example ['europe-west4', 'europe-west1', 'europe-west3']
+   */
+  regions: string[];
+
+  /**
+   * Last-resort fallback region, tried after all `regions` are exhausted
+   *
+   * @example 'us-central1'
+   */
+  fallback: string;
+
+  /**
+   * Whether to attempt the fallback region one extra time after the main rotation fails
+   *
+   * @description Mirrors the `alwaysTryFallback` behaviour in llm-middleware.
+   * Useful when the fallback is a higher-quota global region.
+   *
+   * @default true
+   */
+  alwaysTryFallback?: boolean;
+}
+
+/**
  * Supported Google Cloud TTS regions for EU data residency
  *
  * @description Use EU regions for GDPR/CDPA compliance with data residency guarantees.
@@ -601,16 +641,16 @@ export interface InworldProviderOptions {
 }
 
 /**
- * Gemini TTS provider options
+ * Vertex AI TTS provider options
  *
- * @provider Gemini TTS API (Google AI)
- * @description Gemini 2.5 TTS models using the generateContent endpoint with audio output.
+ * @provider Vertex AI TTS (Google Cloud)
+ * @description Gemini 2.5 TTS models via Vertex AI using the generateContent endpoint with audio output.
  * Supports 30 voices with 90+ languages (auto-detect). Style control via natural language prompts.
  * Test/Admin only – no EU data residency guarantees.
  *
- * @see https://ai.google.dev/gemini-api/docs/text-to-speech
+ * @see https://cloud.google.com/vertex-ai/generative-ai/docs/text-to-speech
  */
-export interface GeminiProviderOptions {
+export interface VertexAITTSProviderOptions {
   /**
    * TTS model to use
    *
@@ -633,6 +673,17 @@ export interface GeminiProviderOptions {
    * @example 'Speak in a calm, professional tone:'
    */
   stylePrompt?: string;
+
+  /**
+   * Per-request Vertex AI region override
+   *
+   * @description Overrides the constructor region and skips any regionRotation config.
+   * Use this when you need to pin a specific request to a specific region.
+   *
+   * @example 'europe-west4'
+   * @example 'us-central1'
+   */
+  region?: string;
 }
 
 /**
@@ -649,7 +700,7 @@ export type ProviderOptions =
   | EdenAIProviderOptions
   | FishAudioProviderOptions
   | InworldProviderOptions
-  | GeminiProviderOptions;
+  | VertexAITTSProviderOptions;
 
 /**
  * Type guard to check if options are for Azure
@@ -770,15 +821,16 @@ export function isInworldOptions(
 }
 
 /**
- * Type guard to check if options are for Gemini TTS
+ * Type guard to check if options are for Vertex AI TTS
  */
-export function isGeminiOptions(
+export function isVertexAITTSOptions(
   options: unknown
-): options is GeminiProviderOptions {
+): options is VertexAITTSProviderOptions {
   return (
     typeof options === 'object' &&
     options !== null &&
     ('stylePrompt' in options ||
+      'regionRotation' in options ||
       ('model' in options &&
         typeof (options as { model: unknown }).model === 'string' &&
         (options as { model: string }).model.startsWith('gemini-')))

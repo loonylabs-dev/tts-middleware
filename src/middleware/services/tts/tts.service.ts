@@ -15,7 +15,7 @@ import { EdenAIProvider } from './providers/edenai-provider';
 import { GoogleCloudTTSProvider } from './providers/google-cloud-tts-provider';
 import { FishAudioProvider } from './providers/fish-audio-provider';
 import { InworldProvider } from './providers/inworld-provider';
-import { GeminiProvider } from './providers/gemini-provider';
+import { VertexAITTSProvider } from './providers/vertex-ai-tts-provider';
 import {
   executeWithRetry,
   DEFAULT_RETRY_CONFIG,
@@ -146,13 +146,13 @@ export class TTSService {
     }
 
     try {
-      // Initialize Gemini TTS provider (test/admin only)
-      const geminiProvider = new GeminiProvider();
-      this.providers.set(TTSProvider.GEMINI, geminiProvider);
+      // Initialize Vertex AI TTS provider (test/admin only)
+      const vertexAIProvider = new VertexAITTSProvider();
+      this.providers.set(TTSProvider.VERTEX_AI, vertexAIProvider);
 
-      this.log('debug', 'Gemini TTS provider initialized');
+      this.log('debug', 'Vertex AI TTS provider initialized');
     } catch (error) {
-      this.log('warn', 'Failed to initialize Gemini TTS provider', {
+      this.log('warn', 'Failed to initialize Vertex AI TTS provider', {
         error: (error as Error).message,
       });
     }
@@ -188,7 +188,7 @@ export class TTSService {
       deepgram: TTSProvider.DEEPGRAM,
       fish_audio: TTSProvider.FISH_AUDIO,
       inworld: TTSProvider.INWORLD,
-      gemini: TTSProvider.GEMINI,
+      vertex_ai: TTSProvider.VERTEX_AI,
     };
 
     return providerMap[normalized];

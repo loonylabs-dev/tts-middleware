@@ -26,7 +26,7 @@ export enum TTSProvider {
   DEEPGRAM = 'deepgram',
   FISH_AUDIO = 'fish_audio',
   INWORLD = 'inworld',
-  GEMINI = 'gemini',
+  VERTEX_AI = 'vertex_ai',
 }
 
 /**
@@ -239,6 +239,17 @@ export interface TTSResponseMetadata {
    * @MVP ✅ Implemented
    */
   sampleRate: number;
+
+  /**
+   * GCP region that processed the request
+   *
+   * @description Set by Vertex AI-based providers (Vertex AI TTS).
+   * Useful for auditing data residency and diagnosing region rotation.
+   *
+   * @example 'europe-west4'
+   * @example 'us-central1'
+   */
+  region?: string;
 }
 
 /**
