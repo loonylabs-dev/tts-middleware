@@ -47,7 +47,7 @@ export type {
   EdenAIProviderOptions,
   FishAudioProviderOptions,
   InworldProviderOptions,
-  GeminiProviderOptions,
+  VertexAITTSProviderOptions,
   ProviderOptions,
 } from './types';
 
@@ -61,7 +61,7 @@ export {
   isEdenAIOptions,
   isFishAudioOptions,
   isInworldOptions,
-  isGeminiOptions,
+  isVertexAITTSOptions,
 } from './types';
 
 // ===== Providers =====
@@ -72,8 +72,10 @@ export {
   FishAudioProvider,
   GoogleCloudTTSProvider,
   InworldProvider,
-  GeminiProvider,
+  VertexAITTSProvider,
 } from './providers';
+
+export type { VertexAITTSConfig } from './providers';
 
 export type {
   GoogleCloudTTSRegion,

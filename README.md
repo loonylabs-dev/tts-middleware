@@ -2,7 +2,7 @@
 
 # TTS Middleware
 
-*Provider-agnostic Text-to-Speech middleware with **GDPR compliance** support. Currently supports Azure Speech Services, EdenAI, Google Cloud TTS, Fish Audio, Inworld AI, and Gemini TTS. Features EU data residency via Azure and Google Cloud, pluggable logging, character-based billing, and comprehensive error handling.*
+*Provider-agnostic Text-to-Speech middleware with **GDPR compliance** support. Currently supports Azure Speech Services, EdenAI, Google Cloud TTS, Fish Audio, Inworld AI, and Vertex AI TTS. Features EU data residency via Azure and Google Cloud, pluggable logging, character-based billing, and comprehensive error handling.*
 
 <!-- Horizontal Badge Navigation Bar -->
 [![npm version](https://img.shields.io/npm/v/@loonylabs/tts-middleware.svg?style=for-the-badge&logo=npm&logoColor=white)](https://www.npmjs.com/package/@loonylabs/tts-middleware)
@@ -43,7 +43,7 @@
   - **Google Cloud TTS**: Neural2, WaveNet, Studio voices with EU data residency
   - **Fish Audio**: S1 model with 13 languages & 64+ emotions (test/admin only)
   - **Inworld AI**: TTS 1.5 Max/Mini with 15 languages & voice cloning (test/admin only)
-  - **Gemini TTS**: Flash/Pro models with 30 voices, 90+ languages & style prompts (test/admin only)
+  - **Vertex AI TTS**: Gemini Flash/Pro models with 30 voices, 90+ languages & style prompts (test/admin only)
   - **Ready for:** OpenAI, ElevenLabs, Deepgram (interfaces prepared)
 - **GDPR/DSGVO Compliance**: Built-in EU region support for Azure and Google Cloud
 - **SSML Abstraction**: Auto-generates provider-specific SSML from simple JSON options
@@ -139,10 +139,10 @@ const inworld = await ttsService.synthesize({
   providerOptions: { modelId: 'inworld-tts-1.5-max', temperature: 1.1 },
 });
 
-// Gemini TTS via Vertex AI (test/admin only)
-const gemini = await ttsService.synthesize({
+// Vertex AI TTS (test/admin only)
+const vertexAI = await ttsService.synthesize({
   text: 'Have a wonderful day!',
-  provider: TTSProvider.GEMINI,
+  provider: TTSProvider.VERTEX_AI,
   voice: { id: 'Kore' },
   providerOptions: { model: 'gemini-2.5-flash-preview-tts', stylePrompt: 'Say cheerfully:' },
 });
@@ -249,9 +249,9 @@ FISH_AUDIO_API_KEY=your-fish-audio-api-key
 # Inworld AI (test/admin only – no EU data residency)
 INWORLD_API_KEY=your-inworld-api-key
 
-# Gemini TTS via Vertex AI (test/admin only – no EU data residency)
+# Vertex AI TTS (test/admin only – no EU data residency)
 # Reuses GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_CLOUD_PROJECT from above
-GEMINI_REGION=us-central1
+VERTEX_AI_TTS_REGION=us-central1
 
 # Logging
 TTS_DEBUG=false
@@ -317,18 +317,19 @@ LOG_LEVEL=info
 | **Pricing** | $10/1M chars (Max), $5/1M chars (Mini) |
 | **EU Compliance** | No data residency guarantees |
 
-### Gemini TTS (Test/Admin Only)
+### Vertex AI TTS (Test/Admin Only)
 
 | Feature | Details |
 |---------|---------|
-| **Models** | Flash (budget, fast) and Pro (premium, natural) |
+| **Models** | `gemini-2.5-flash-preview-tts` (budget, fast), `gemini-2.5-pro-preview-tts` (premium, natural) |
 | **Languages** | 90+ with auto-detection |
 | **Voices** | 30 multilingual: Kore, Puck, Charon, Zephyr, Fenrir, Sulafat, etc. |
 | **Style Control** | Natural language prompts: "Say cheerfully:", "Read in a spooky whisper:" |
 | **Audio** | MP3 (via ffmpeg), WAV (fallback) |
-| **Auth** | Vertex AI Service Account (reuses `GOOGLE_APPLICATION_CREDENTIALS`) |
+| **Auth** | Service Account OAuth2 (reuses `GOOGLE_APPLICATION_CREDENTIALS`) |
+| **Region** | `VERTEX_AI_TTS_REGION` env var (default: `us-central1`) |
 | **Pricing** | $0.50-1.00/M input tokens + $10-20/M audio output tokens |
-| **EU Compliance** | No data residency guarantees |
+| **EU Compliance** | Preview models currently `us-central1` only — no EU data residency yet |
 
 ## GDPR / Compliance
 
@@ -341,9 +342,11 @@ LOG_LEVEL=info
 | **EdenAI** | Yes | Depends* | Depends* | Depends on underlying provider |
 | **Fish Audio** | No | No | No | Test/admin only |
 | **Inworld AI** | No | No | No | Test/admin only |
-| **Gemini TTS** | No | No | No | Test/admin only |
+| **Vertex AI TTS** | Yes (Vertex DPA) | Partial | No* | Test/admin only |
 
 *EdenAI is an aggregator - compliance depends on the underlying provider.
+
+\*Vertex AI TTS: DPA available, no model training on customer data — but preview models are currently `us-central1` only (no EU data residency until GA with EU region support).
 
 ## API Reference
 
@@ -530,14 +533,14 @@ graph TD
     Registry -->|Select| Eden[EdenAIProvider]
     Registry -->|Select| Fish[FishAudioProvider]
     Registry -->|Select| Inworld[InworldProvider]
-    Registry -->|Select| Gemini[GeminiProvider]
+    Registry -->|Select| VertexAI[VertexAITTSProvider]
 
     Azure -->|SSML/SDK| AzureAPI[Azure Speech API]
     GCloud -->|gRPC/SDK| GoogleAPI[Google Cloud TTS API]
     Eden -->|REST| EdenAPI[EdenAI API]
     Fish -->|REST| FishAPI[Fish Audio API]
     Inworld -->|REST| InworldAPI[Inworld AI API]
-    Gemini -->|REST/OAuth2| GeminiAPI[Vertex AI Gemini API]
+    VertexAI -->|REST/OAuth2| VertexAPI[Vertex AI API]
 
     GoogleAPI -->|EU Endpoint| EU[eu-texttospeech.googleapis.com]
     EdenAPI -.-> OpenAI[OpenAI TTS]
@@ -547,7 +550,7 @@ graph TD
 ## Testing
 
 ```bash
-# Run all tests (540+ tests, >90% coverage)
+# Run all tests (600+ tests, >90% coverage)
 npm test
 
 # Unit tests only
@@ -564,7 +567,7 @@ npx ts-node scripts/manual-test-edenai.ts
 npx ts-node scripts/manual-test-google-cloud-tts.ts
 npx ts-node scripts/manual-test-fish-audio.ts [en] [de]
 npx ts-node scripts/manual-test-inworld.ts [en] [de] [mini]
-npx ts-node scripts/manual-test-gemini.ts [en] [de] [pro] [style]
+npx ts-node scripts/manual-test-vertex-ai.ts [en] [de] [pro] [style]
 
 # List available Google Cloud voices
 npx ts-node scripts/list-google-voices.ts de-DE

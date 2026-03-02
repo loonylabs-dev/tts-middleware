@@ -1,7 +1,7 @@
 /**
- * Gemini TTS Provider
+ * Vertex AI TTS Provider
  *
- * @description Provider for Google Gemini TTS via Vertex AI, using the generateContent
+ * @description Provider for Google Vertex AI TTS via the generateContent
  * endpoint with responseModalities: ['AUDIO']. Authenticates via Service Account
  * (same as Google Cloud TTS — reuses GOOGLE_APPLICATION_CREDENTIALS).
  *
@@ -22,12 +22,13 @@ import {
   BaseTTSProvider,
   InvalidConfigError,
 } from './base-tts-provider';
-import type { GeminiProviderOptions } from '../types/provider-options.types';
+import type { VertexAITTSProviderOptions, RegionRotationConfig } from '../types/provider-options.types';
+import { isQuotaError } from '../utils/retry.utils';
 
 /**
- * Gemini TTS configuration (Vertex AI)
+ * Vertex AI TTS configuration
  */
-export interface GeminiConfig {
+export interface VertexAITTSConfig {
   /**
    * Path to Service Account JSON file
    * @env GOOGLE_APPLICATION_CREDENTIALS
@@ -42,10 +43,26 @@ export interface GeminiConfig {
 
   /**
    * Vertex AI region
-   * @env GEMINI_REGION
+   * @env VERTEX_AI_TTS_REGION
    * @default 'us-central1'
    */
   region?: string;
+
+  /**
+   * Optional region rotation for quota management (429 / Resource Exhausted)
+   *
+   * @description When configured, the provider automatically rotates through the
+   * specified regions on quota errors. Same pattern as llm-middleware and tti-middleware.
+   *
+   * @example
+   * ```typescript
+   * {
+   *   regions: ['europe-west4', 'europe-west1'],
+   *   fallback: 'us-central1',
+   * }
+   * ```
+   */
+  regionRotation?: RegionRotationConfig;
 }
 
 const DEFAULT_MODEL = 'gemini-2.5-flash-preview-tts';
@@ -53,19 +70,18 @@ const DEFAULT_SAMPLE_RATE = 24000;
 const DEFAULT_REGION = 'us-central1';
 
 /**
- * Gemini TTS provider implementation
+ * Vertex AI TTS provider implementation
  *
- * @description Provides TTS synthesis using Google's Gemini generateContent API
- * via Vertex AI. Authenticates with Service Account OAuth2 (same credentials as
- * Google Cloud TTS). Gemini outputs raw PCM which is converted to MP3 (via ffmpeg)
- * or WAV (pure Node.js fallback).
+ * @description Provides TTS synthesis using Google's Vertex AI generateContent API.
+ * Authenticates with Service Account OAuth2 (same credentials as Google Cloud TTS).
+ * Outputs raw PCM which is converted to MP3 (via ffmpeg) or WAV (pure Node.js fallback).
  *
  * Billing: Token-based ($0.50-1.00/M input + $10-20/M audio output tokens).
  * For billing compatibility, reports character count like all other providers.
  *
  * @example
  * ```typescript
- * const provider = new GeminiProvider();
+ * const provider = new VertexAITTSProvider();
  * const response = await provider.synthesize(
  *   "Hello World",
  *   "Kore",
@@ -81,28 +97,29 @@ const DEFAULT_REGION = 'us-central1';
  * );
  * ```
  */
-export class GeminiProvider extends BaseTTSProvider {
-  private config: GeminiConfig;
+export class VertexAITTSProvider extends BaseTTSProvider {
+  private config: VertexAITTSConfig;
   private authClient: { getAccessToken: () => Promise<{ token?: string | null }> } | null = null;
 
   /**
-   * Creates a new Gemini TTS provider
+   * Creates a new Vertex AI TTS provider
    *
    * @param config - Optional configuration (uses env vars if not provided)
    * @throws {InvalidConfigError} If credentials are missing
    */
-  constructor(config?: Partial<GeminiConfig>) {
-    super(TTSProvider.GEMINI);
+  constructor(config?: Partial<VertexAITTSConfig>) {
+    super(TTSProvider.VERTEX_AI);
 
     this.config = {
       keyFilename: config?.keyFilename || process.env.GOOGLE_APPLICATION_CREDENTIALS,
       projectId: config?.projectId || process.env.GOOGLE_CLOUD_PROJECT,
-      region: config?.region || process.env.GEMINI_REGION || DEFAULT_REGION,
+      region: config?.region || process.env.VERTEX_AI_TTS_REGION || DEFAULT_REGION,
+      regionRotation: config?.regionRotation,
     };
 
-    this.validateGeminiConfig();
+    this.validateVertexAIConfig();
 
-    this.log('info', 'Gemini TTS provider initialized', {
+    this.log('info', 'Vertex AI TTS provider initialized', {
       hasCredentials: !!this.config.keyFilename,
       projectId: this.config.projectId ? '***' : undefined,
       region: this.config.region,
@@ -110,23 +127,23 @@ export class GeminiProvider extends BaseTTSProvider {
   }
 
   /**
-   * Validate Gemini configuration
+   * Validate Vertex AI configuration
    *
    * @private
    * @throws {InvalidConfigError} If configuration is invalid
    */
-  private validateGeminiConfig(): void {
+  private validateVertexAIConfig(): void {
     if (!this.config.keyFilename) {
       throw new InvalidConfigError(
         this.providerName,
-        'Google Cloud credentials are required for Gemini TTS (GOOGLE_APPLICATION_CREDENTIALS)'
+        'Google Cloud credentials are required for Vertex AI TTS (GOOGLE_APPLICATION_CREDENTIALS)'
       );
     }
 
     if (!this.config.projectId) {
       throw new InvalidConfigError(
         this.providerName,
-        'Google Cloud Project ID is required for Gemini TTS (GOOGLE_CLOUD_PROJECT)'
+        'Google Cloud Project ID is required for Vertex AI TTS (GOOGLE_CLOUD_PROJECT)'
       );
     }
   }
@@ -159,7 +176,7 @@ export class GeminiProvider extends BaseTTSProvider {
   }
 
   /**
-   * Synthesize text to speech using Gemini TTS
+   * Synthesize text to speech using Vertex AI TTS
    *
    * @param text - The input text to synthesize
    * @param voiceId - The voice name (e.g. "Kore", "Puck", "Charon")
@@ -174,13 +191,13 @@ export class GeminiProvider extends BaseTTSProvider {
     this.validateConfig(request);
 
     const startTime = Date.now();
-    const options = (request.providerOptions || {}) as GeminiProviderOptions;
+    const options = (request.providerOptions || {}) as VertexAITTSProviderOptions;
     const model = options.model || DEFAULT_MODEL;
     const requestedFormat = request.audio?.format || 'mp3';
 
     const requestBody = this.buildRequest(text, voiceId, options);
 
-    this.log('debug', 'Synthesizing with Gemini TTS', {
+    this.log('debug', 'Synthesizing with Vertex AI TTS', {
       voiceId,
       model,
       textLength: text.length,
@@ -188,7 +205,11 @@ export class GeminiProvider extends BaseTTSProvider {
     });
 
     try {
-      const pcmBuffer = await this.callAPI(requestBody, model);
+      const { pcmBuffer, region: usedRegion } = await this.callAPIWithRegionRotation(
+        requestBody,
+        model,
+        options.region,
+      );
       const { audioBuffer, audioFormat } = await this.convertPcmAudio(pcmBuffer, requestedFormat);
       const duration = Date.now() - startTime;
 
@@ -198,6 +219,7 @@ export class GeminiProvider extends BaseTTSProvider {
         duration,
         audioSize: audioBuffer.length,
         audioFormat,
+        region: usedRegion,
       });
 
       return {
@@ -209,6 +231,7 @@ export class GeminiProvider extends BaseTTSProvider {
           audioDuration: audioFormat === 'mp3' ? getMp3Duration(audioBuffer) : undefined,
           audioFormat,
           sampleRate: DEFAULT_SAMPLE_RATE,
+          region: usedRegion,
         },
         billing: {
           characters: this.countCharacters(text),
@@ -220,19 +243,19 @@ export class GeminiProvider extends BaseTTSProvider {
         error: (error as Error).message,
       });
 
-      throw this.handleError(error as Error, 'during Gemini TTS API call');
+      throw this.handleError(error as Error, 'during Vertex AI TTS API call');
     }
   }
 
   /**
-   * Build Gemini generateContent request payload
+   * Build Vertex AI generateContent request payload
    *
    * @private
    */
   private buildRequest(
     text: string,
     voiceId: string,
-    options: GeminiProviderOptions
+    options: VertexAITTSProviderOptions
   ): Record<string, unknown> {
     const synthesisText = options.stylePrompt
       ? `${options.stylePrompt} ${text}`
@@ -259,20 +282,84 @@ export class GeminiProvider extends BaseTTSProvider {
   }
 
   /**
-   * Call Gemini generateContent API via Vertex AI
+   * Call the Vertex AI API with optional region rotation on quota errors
    *
    * @private
    * @param requestBody - The request payload
-   * @param model - The Gemini model to use
+   * @param model - The model to use
+   * @param regionOverride - Optional per-request region override (skips rotation)
+   * @returns The PCM audio buffer and the region that processed the request
+   */
+  private async callAPIWithRegionRotation(
+    requestBody: Record<string, unknown>,
+    model: string,
+    regionOverride?: string,
+  ): Promise<{ pcmBuffer: Buffer; region: string }> {
+    // Per-request override: skip rotation entirely
+    if (regionOverride) {
+      const pcmBuffer = await this.callAPI(requestBody, model, regionOverride);
+      return { pcmBuffer, region: regionOverride };
+    }
+
+    const rotationConfig = this.config.regionRotation;
+
+    // No rotation configured: use static region from constructor config
+    if (!rotationConfig) {
+      const region = this.config.region || DEFAULT_REGION;
+      const pcmBuffer = await this.callAPI(requestBody, model, region);
+      return { pcmBuffer, region };
+    }
+
+    // Region rotation: try each region in order, rotate on quota errors only
+    const regionsToTry = [...rotationConfig.regions, rotationConfig.fallback];
+    let lastQuotaError: Error | null = null;
+
+    for (const region of regionsToTry) {
+      try {
+        const pcmBuffer = await this.callAPI(requestBody, model, region);
+        return { pcmBuffer, region };
+      } catch (error) {
+        if (isQuotaError(error)) {
+          this.log('warn', 'Quota exceeded, rotating to next region', {
+            failedRegion: region,
+          });
+          lastQuotaError = error as Error;
+          continue;
+        }
+        throw error; // Non-quota errors: rethrow immediately
+      }
+    }
+
+    // Bonus attempt: try fallback one more time (alwaysTryFallback default: true)
+    if (rotationConfig.alwaysTryFallback !== false) {
+      try {
+        const pcmBuffer = await this.callAPI(requestBody, model, rotationConfig.fallback);
+        return { pcmBuffer, region: rotationConfig.fallback };
+      } catch (error) {
+        if (!isQuotaError(error)) throw error;
+        lastQuotaError = error as Error;
+      }
+    }
+
+    throw lastQuotaError ?? new Error('All Vertex AI TTS regions exhausted');
+  }
+
+  /**
+   * Call Vertex AI generateContent API
+   *
+   * @private
+   * @param requestBody - The request payload
+   * @param model - The model to use
+   * @param region - The Vertex AI region to use
    * @returns Promise resolving to raw PCM audio buffer
    */
   private async callAPI(
     requestBody: Record<string, unknown>,
-    model: string
+    model: string,
+    region: string,
   ): Promise<Buffer> {
     const accessToken = await this.getAccessToken();
 
-    const region = this.config.region || DEFAULT_REGION;
     const projectId = this.config.projectId;
     const url = `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/${model}:generateContent`;
 
@@ -287,7 +374,7 @@ export class GeminiProvider extends BaseTTSProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+      throw new Error(`Vertex AI API error (${response.status}): ${errorText}`);
     }
 
     const responseJson = await response.json() as {
@@ -305,7 +392,7 @@ export class GeminiProvider extends BaseTTSProvider {
 
     const inlineData = responseJson.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     if (!inlineData?.data) {
-      throw new Error('Gemini API returned no audio data');
+      throw new Error('Vertex AI API returned no audio data');
     }
 
     return Buffer.from(inlineData.data, 'base64');

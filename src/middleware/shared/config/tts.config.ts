@@ -143,14 +143,14 @@ export interface InworldConfig {
 }
 
 /**
- * Gemini TTS Configuration (via Vertex AI)
+ * Vertex AI TTS Configuration
  * Reuses Google Cloud credentials (GOOGLE_APPLICATION_CREDENTIALS).
  * Test/Admin only – no EU data residency guarantees.
  */
-export interface GeminiConfig {
+export interface VertexAITTSConfig {
   /**
-   * Vertex AI region for Gemini TTS
-   * @env GEMINI_REGION
+   * Vertex AI region for Vertex AI TTS
+   * @env VERTEX_AI_TTS_REGION
    * @default 'us-central1'
    */
   REGION: string;
@@ -193,9 +193,9 @@ export interface TTSConfig {
   INWORLD: InworldConfig;
 
   /**
-   * Gemini TTS configuration (test/admin only)
+   * Vertex AI TTS configuration (test/admin only)
    */
-  GEMINI: GeminiConfig;
+  VERTEX_AI: VertexAITTSConfig;
 
   /**
    * Enable debug logging
@@ -247,7 +247,7 @@ export function getTTSConfig(): TTSConfig {
   const googleCredentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
   const fishAudioApiKey = process.env.FISH_AUDIO_API_KEY || '';
   const inworldApiKey = process.env.INWORLD_API_KEY || '';
-  const geminiRegion = process.env.GEMINI_REGION || 'us-central1';
+  const vertexAITTSRegion = process.env.VERTEX_AI_TTS_REGION || 'us-central1';
   const defaultProvider =
     (process.env.TTS_DEFAULT_PROVIDER as TTSProvider) || TTSProvider.AZURE;
   const debug = process.env.TTS_DEBUG === 'true';
@@ -300,8 +300,8 @@ export function getTTSConfig(): TTSConfig {
     INWORLD: {
       API_KEY: inworldApiKey,
     },
-    GEMINI: {
-      REGION: geminiRegion,
+    VERTEX_AI: {
+      REGION: vertexAITTSRegion,
     },
     DEBUG: debug,
     MAX_TEXT_LENGTH: 3000,
@@ -414,17 +414,17 @@ export function validateTTSConfig(config: TTSConfig): void {
     }
   }
 
-  // Validate Gemini TTS configuration (if used as default provider)
-  // Gemini reuses Google Cloud credentials (GOOGLE_APPLICATION_CREDENTIALS + GOOGLE_CLOUD_PROJECT)
-  if (config.DEFAULT_PROVIDER === TTSProvider.GEMINI) {
+  // Validate Vertex AI TTS configuration (if used as default provider)
+  // Vertex AI TTS reuses Google Cloud credentials (GOOGLE_APPLICATION_CREDENTIALS + GOOGLE_CLOUD_PROJECT)
+  if (config.DEFAULT_PROVIDER === TTSProvider.VERTEX_AI) {
     if (!config.GOOGLE.CREDENTIALS_PATH) {
       errors.push(
-        'GOOGLE_APPLICATION_CREDENTIALS is required when using Gemini TTS provider (set in environment variable)'
+        'GOOGLE_APPLICATION_CREDENTIALS is required when using Vertex AI TTS provider (set in environment variable)'
       );
     }
     if (!config.GOOGLE.PROJECT_ID) {
       errors.push(
-        'GOOGLE_CLOUD_PROJECT is required when using Gemini TTS provider (set in environment variable)'
+        'GOOGLE_CLOUD_PROJECT is required when using Vertex AI TTS provider (set in environment variable)'
       );
     }
   }

@@ -98,6 +98,32 @@ export function isRetryableError(error: unknown): boolean {
 }
 
 /**
+ * Determines whether an error is a quota/rate-limit error (429 or Resource Exhausted)
+ *
+ * @description Unlike isRetryableError (which includes 5xx and network errors),
+ * this specifically identifies quota exhaustion. Used for region rotation:
+ * rotate regions only on quota errors, not on server errors (5xx) or network failures.
+ *
+ * @param error - The error to check
+ * @returns true if the error is a quota/rate-limit error
+ */
+export function isQuotaError(error: unknown): boolean {
+  if (error instanceof QuotaExceededError) return true;
+
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes('429') ||
+      msg.includes('quota') ||
+      msg.includes('rate limit') ||
+      msg.includes('resource exhausted')
+    );
+  }
+
+  return false;
+}
+
+/**
  * Calculate delay with exponential backoff and jitter
  *
  * @param attempt - The retry attempt number (0-based)

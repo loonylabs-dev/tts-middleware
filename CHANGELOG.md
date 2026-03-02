@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-03-02
+
+### Breaking Changes
+- **Rename: `GeminiProvider` → `VertexAITTSProvider`** — The provider class has been renamed to reflect
+  that it uses the Vertex AI API (not the Gemini API / Google AI Studio), which provides regional
+  data residency and enterprise DPA coverage.
+  - `TTSProvider.GEMINI = 'gemini'` → `TTSProvider.VERTEX_AI = 'vertex_ai'`
+  - Class `GeminiProvider` → `VertexAITTSProvider`
+  - Interface `GeminiConfig` → `VertexAITTSConfig`
+  - Interface `GeminiProviderOptions` → `VertexAITTSProviderOptions`
+  - Type guard `isGeminiOptions()` → `isVertexAITTSOptions()`
+  - Env var `GEMINI_REGION` → `VERTEX_AI_TTS_REGION`
+  - Provider file `gemini-provider.ts` → `vertex-ai-tts-provider.ts`
+  - **DB migration required:** Update stored `'gemini'` values to `'vertex_ai'` in all consumer applications
+
+**Migration example:**
+```typescript
+// Before
+import { GeminiProvider, TTSProvider } from '@loonylabs/tts-middleware';
+const provider = new GeminiProvider({ region: 'us-central1' });
+// provider: TTSProvider.GEMINI
+
+// After
+import { VertexAITTSProvider, TTSProvider } from '@loonylabs/tts-middleware';
+const provider = new VertexAITTSProvider({ region: 'us-central1' });
+// provider: TTSProvider.VERTEX_AI
+```
+
+### Google Provider — Datenschutz-Übersicht
+
+Both Google-based TTS providers use the same Service Account credentials
+(`GOOGLE_APPLICATION_CREDENTIALS` + `GOOGLE_CLOUD_PROJECT`) but access different GCP services:
+
+| Provider | Enum | GCP Service | EU-fähig? | Empfehlung |
+|---|---|---|---|---|
+| `GoogleCloudTTSProvider` | `TTSProvider.GOOGLE` | Cloud Text-to-Speech API | ✅ Ja | Produktion (EU/DACH) |
+| `VertexAITTSProvider` | `TTSProvider.VERTEX_AI` | Vertex AI generateContent | ⚠️ Preview | Test/Admin only |
+
+**Google Cloud TTS (`TTSProvider.GOOGLE`):**
+- GDPR/CDPA-konform, EU Multi-Region (`region: 'eu'`)
+- Zero Data Retention: Audiodaten werden nicht gespeichert oder für Training genutzt
+- Supports: Neural2, Standard, Chirp3 voices — stabile GA-Modelle
+- Empfohlen für Produktivbetrieb in EU/DACH
+
+**Vertex AI TTS (`TTSProvider.VERTEX_AI`):**
+- Vertex AI Data Processing Addendum (DPA) verfügbar — kein Training auf Kundendaten per DPA
+- Regionaler Endpoint konfigurierbar via `VERTEX_AI_TTS_REGION` oder `regionRotation`
+- Preview-Modelle (`gemini-2.5-flash-preview-tts`, `gemini-2.5-pro-preview-tts`) aktuell nur `us-central1`
+- Für EU-Produktivbetrieb: Warten auf GA-Release mit EU-Region-Support
+- Aktuell: Test/Admin only
+
+---
+
 ## [0.9.0] - 2026-02-17
 
 ### Added
