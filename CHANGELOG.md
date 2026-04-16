@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-04-17
+
+### Added
+- **Gemini 3.1 Flash TTS support** — new model option `gemini-3.1-flash-tts-preview`
+  for the VertexAITTSProvider, enabling inline audio tags (`[sigh]`, `[whispering]`,
+  `[short pause]`, etc.) and native multi-speaker dialog synthesis
+- **`synthesizeDialog()` method** on `VertexAITTSProvider` for multi-segment,
+  multi-speaker dialog synthesis in a single call. Each segment becomes one
+  Vertex AI request; the resulting PCM buffers are concatenated and converted
+  once at the end. Segment-level `stylePrompt` and `temperature` overrides are
+  supported.
+- **Client-side payload byte guard** — enforces the 8 KB combined / 4 KB text /
+  4 KB prompt limits before the API call, throwing the new `PayloadTooLargeError`
+  (with `segmentIndex` for dialog mode) so consumer apps avoid billing for rejected requests
+- **Aggregated billing for dialog mode** — `billing.characters` sums every turn
+  and stylePrompt across all segments, matching what is actually sent to Google
+  (including `Speaker: ` prefixes) so consumer apps can bill their customers accurately
+- New exports: `DialogSpeaker`, `DialogTurn`, `DialogSegment`, `SynthesizeDialogRequest`,
+  `PayloadTooLargeError`, `TTSErrorCode.PAYLOAD_TOO_LARGE`
+- New option: `VertexAITTSProviderOptions.temperature` (0.0–2.0) for Gemini 3.1 Flash TTS
+
+---
+
 ## [0.11.1] - 2026-04-08
 
 ### Fixed

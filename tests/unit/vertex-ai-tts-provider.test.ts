@@ -13,7 +13,9 @@ import {
   InvalidConfigError,
   QuotaExceededError,
   SynthesisFailedError,
+  PayloadTooLargeError,
 } from '../../src/middleware/services/tts/providers/base-tts-provider';
+import type { SynthesizeDialogRequest } from '../../src/middleware/services/tts/types';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -879,6 +881,253 @@ describe('VertexAITTSProvider', () => {
       };
 
       await expect(provider.synthesize('test', '', request)).rejects.toThrow(InvalidConfigError);
+    });
+  });
+
+  describe('Synthesize - Payload Limits (single)', () => {
+    test('throws PayloadTooLargeError when text exceeds 4000 bytes', async () => {
+      const provider = new VertexAITTSProvider();
+      const hugeText = 'a'.repeat(4001);
+      const request: TTSSynthesizeRequest = {
+        text: hugeText,
+        voice: { id: 'Kore' },
+      };
+
+      await expect(provider.synthesize(hugeText, 'Kore', request)).rejects.toThrow(
+        PayloadTooLargeError,
+      );
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    test('includes actualBytes and maxBytes on PayloadTooLargeError', async () => {
+      const provider = new VertexAITTSProvider();
+      const hugeText = 'a'.repeat(4500);
+      const request: TTSSynthesizeRequest = { text: hugeText, voice: { id: 'Kore' } };
+
+      try {
+        await provider.synthesize(hugeText, 'Kore', request);
+        fail('expected PayloadTooLargeError');
+      } catch (err) {
+        expect(err).toBeInstanceOf(PayloadTooLargeError);
+        const typed = err as PayloadTooLargeError;
+        expect(typed.actualBytes).toBe(4500);
+        expect(typed.maxBytes).toBe(4000);
+      }
+    });
+  });
+
+  describe('synthesizeDialog', () => {
+    function makeRequest(overrides: Partial<SynthesizeDialogRequest> = {}): SynthesizeDialogRequest {
+      return {
+        speakers: [
+          { speaker: 'Alice', voice: 'Aoede' },
+          { speaker: 'Bob', voice: 'Puck' },
+        ],
+        segments: [
+          {
+            stylePrompt: 'Casual conversation',
+            turns: [
+              { speaker: 'Alice', text: 'Hi Bob!' },
+              { speaker: 'Bob', text: '[laughing] Hey Alice.' },
+            ],
+          },
+        ],
+        audio: { format: 'wav' },
+        providerOptions: { model: 'gemini-3.1-flash-tts-preview' },
+        ...overrides,
+      };
+    }
+
+    test('synthesizes a single-segment dialog successfully', async () => {
+      const provider = new VertexAITTSProvider();
+      const result = await provider.synthesizeDialog(makeRequest());
+
+      expect(result.audio).toBeInstanceOf(Buffer);
+      expect(result.metadata.provider).toBe(TTSProvider.VERTEX_AI);
+      expect(result.metadata.sampleRate).toBe(24000);
+      expect(result.billing.characters).toBeGreaterThan(0);
+    });
+
+    test('sends multiSpeakerVoiceConfig in request body', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog(makeRequest());
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      expect(body.generationConfig.speechConfig.multiSpeakerVoiceConfig).toBeDefined();
+      expect(body.generationConfig.speechConfig.voiceConfig).toBeUndefined();
+      const speakerConfigs = body.generationConfig.speechConfig.multiSpeakerVoiceConfig
+        .speakerVoiceConfigs;
+      expect(speakerConfigs).toHaveLength(2);
+      expect(speakerConfigs[0].speaker).toBe('Alice');
+      expect(speakerConfigs[0].voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Aoede');
+    });
+
+    test('uses gemini-3.1-flash-tts-preview as default dialog model', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [{ speaker: 'A', voice: 'Kore' }],
+        segments: [{ turns: [{ speaker: 'A', text: 'hi' }] }],
+        audio: { format: 'wav' },
+      });
+
+      const calledUrl = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(calledUrl).toContain('gemini-3.1-flash-tts-preview');
+    });
+
+    test('inlines stylePrompt above turns in the text field', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog(makeRequest());
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      const text = body.contents[0].parts[0].text as string;
+      expect(text.startsWith('Casual conversation\n')).toBe(true);
+      expect(text).toContain('Alice: Hi Bob!');
+      expect(text).toContain('Bob: [laughing] Hey Alice.');
+    });
+
+    test('sets temperature when provided on segment', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog(
+        makeRequest({
+          segments: [
+            {
+              stylePrompt: 'test',
+              temperature: 1.5,
+              turns: [{ speaker: 'Alice', text: 'hi' }],
+            },
+          ],
+        }),
+      );
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      expect(body.generationConfig.temperature).toBe(1.5);
+    });
+
+    test('runs multiple segments sequentially and concatenates PCM', async () => {
+      const provider = new VertexAITTSProvider();
+      (fetch as jest.Mock)
+        .mockResolvedValueOnce(mockVertexAIResponse(100))
+        .mockResolvedValueOnce(mockVertexAIResponse(200))
+        .mockResolvedValueOnce(mockVertexAIResponse(300));
+
+      const result = await provider.synthesizeDialog({
+        speakers: [{ speaker: 'A', voice: 'Kore' }],
+        segments: [
+          { turns: [{ speaker: 'A', text: 'one' }] },
+          { turns: [{ speaker: 'A', text: 'two' }] },
+          { turns: [{ speaker: 'A', text: 'three' }] },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      expect(fetch).toHaveBeenCalledTimes(3);
+      // WAV header (44 bytes) + 100 + 200 + 300 = 644
+      expect(result.audio.length).toBe(44 + 600);
+    });
+
+    test('aggregates billing characters across all segments and turns', async () => {
+      const provider = new VertexAITTSProvider();
+      (fetch as jest.Mock)
+        .mockResolvedValueOnce(mockVertexAIResponse())
+        .mockResolvedValueOnce(mockVertexAIResponse());
+
+      const result = await provider.synthesizeDialog({
+        speakers: [
+          { speaker: 'Alice', voice: 'Aoede' },
+          { speaker: 'Bob', voice: 'Puck' },
+        ],
+        segments: [
+          {
+            stylePrompt: 'Calm',
+            turns: [
+              { speaker: 'Alice', text: 'Hello' },
+              { speaker: 'Bob', text: 'Hi' },
+            ],
+          },
+          {
+            stylePrompt: 'Excited',
+            turns: [{ speaker: 'Alice', text: 'Whoa!' }],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      // Segment 1: "Calm"(4) + "Alice: Hello"(12) + "Bob: Hi"(7) = 23
+      // Segment 2: "Excited"(7) + "Alice: Whoa!"(12) = 19
+      // Total: 42
+      expect(result.billing.characters).toBe(42);
+    });
+
+    test('throws PayloadTooLargeError when a segment exceeds 4000 bytes with segment index', async () => {
+      const provider = new VertexAITTSProvider();
+      const longText = 'x'.repeat(4001);
+
+      try {
+        await provider.synthesizeDialog({
+          speakers: [{ speaker: 'A', voice: 'Kore' }],
+          segments: [
+            { turns: [{ speaker: 'A', text: 'short' }] },
+            { turns: [{ speaker: 'A', text: longText }] },
+          ],
+          audio: { format: 'wav' },
+        });
+        fail('expected PayloadTooLargeError');
+      } catch (err) {
+        expect(err).toBeInstanceOf(PayloadTooLargeError);
+        expect((err as PayloadTooLargeError).segmentIndex).toBe(1);
+      }
+    });
+
+    test('throws InvalidConfigError when turn references unknown speaker', async () => {
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesizeDialog({
+          speakers: [{ speaker: 'Alice', voice: 'Aoede' }],
+          segments: [{ turns: [{ speaker: 'Bob', text: 'hi' }] }],
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow(/unknown speaker "Bob"/);
+    });
+
+    test('throws InvalidConfigError on duplicate speaker alias', async () => {
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesizeDialog({
+          speakers: [
+            { speaker: 'Alice', voice: 'Aoede' },
+            { speaker: 'Alice', voice: 'Kore' },
+          ],
+          segments: [{ turns: [{ speaker: 'Alice', text: 'hi' }] }],
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow(/Duplicate speaker alias/);
+    });
+
+    test('throws InvalidConfigError on non-alphanumeric speaker alias', async () => {
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesizeDialog({
+          speakers: [{ speaker: 'Alice Wonder', voice: 'Aoede' }],
+          segments: [{ turns: [{ speaker: 'Alice Wonder', text: 'hi' }] }],
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow(/must be alphanumeric/);
+    });
+
+    test('throws InvalidConfigError on empty segments array', async () => {
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesizeDialog({
+          speakers: [{ speaker: 'A', voice: 'Kore' }],
+          segments: [],
+        }),
+      ).rejects.toThrow(/at least one segment/);
+    });
+
+    test('metadata.voice lists speaker:voice pairs', async () => {
+      const provider = new VertexAITTSProvider();
+      const result = await provider.synthesizeDialog(makeRequest());
+      expect(result.metadata.voice).toBe('Alice:Aoede,Bob:Puck');
     });
   });
 });
