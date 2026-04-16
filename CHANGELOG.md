@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-04-08
+
+### Fixed
+- Ensure ffmpeg-static binary has execute permissions on Linux containers (chmod 755)
+  before spawning — fixes ENOENT on Railway/Docker where postinstall may not preserve permissions
+
+---
+
+## [0.11.0] - 2026-04-08
+
+### Added
+- **ffmpeg auto-detection for Vertex AI TTS:** The provider now automatically resolves the ffmpeg
+  binary path using a priority chain:
+  1. `ffmpegPath` in `VertexAITTSConfig` (explicit config)
+  2. `FFMPEG_PATH` environment variable
+  3. `ffmpeg-static` npm package (optional peer dependency — auto-detected if installed)
+  4. System `ffmpeg` in PATH
+  5. WAV fallback (existing behavior)
+- **New config option:** `VertexAITTSConfig.ffmpegPath` for explicit ffmpeg binary path
+- **New optional peer dependency:** `ffmpeg-static` (>=5.0.0) — install it to get MP3 output
+  in containerized environments (Railway, Docker, etc.) without system ffmpeg
+
+### Fixed
+- Vertex AI TTS now works in containerized deployments (Railway, Docker) where system ffmpeg
+  is not in PATH — previously fell back to WAV which caused downstream MP3 validation errors
+
+---
+
 ## [0.10.0] - 2026-03-02
 
 ### Breaking Changes

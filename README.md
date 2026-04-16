@@ -220,6 +220,30 @@ const response = await ttsService.synthesize({
 
 </details>
 
+<details>
+<summary><strong>ffmpeg (for Vertex AI TTS MP3 output)</strong></summary>
+
+The Vertex AI TTS provider outputs raw PCM audio which is converted to MP3 using ffmpeg.
+The provider resolves the ffmpeg binary automatically using this priority chain:
+
+| Priority | Source | Example |
+|----------|--------|---------|
+| 1 | `ffmpegPath` in config | `new VertexAITTSProvider({ ffmpegPath: '/usr/bin/ffmpeg' })` |
+| 2 | `FFMPEG_PATH` env var | `FFMPEG_PATH=/opt/ffmpeg/bin/ffmpeg` |
+| 3 | `ffmpeg-static` npm package | `npm install ffmpeg-static` (recommended for containers) |
+| 4 | System `ffmpeg` in PATH | `apt install ffmpeg` or `brew install ffmpeg` |
+| 5 | WAV fallback | No ffmpeg needed — outputs WAV instead of MP3 |
+
+**Recommended for containerized deployments** (Railway, Docker, etc.):
+
+```bash
+npm install ffmpeg-static
+```
+
+This bundles a static ffmpeg binary with your app — no system package needed.
+
+</details>
+
 ## Configuration
 
 <details>
@@ -325,7 +349,7 @@ LOG_LEVEL=info
 | **Languages** | 90+ with auto-detection |
 | **Voices** | 30 multilingual: Kore, Puck, Charon, Zephyr, Fenrir, Sulafat, etc. |
 | **Style Control** | Natural language prompts: "Say cheerfully:", "Read in a spooky whisper:" |
-| **Audio** | MP3 (via ffmpeg), WAV (fallback) |
+| **Audio** | MP3 (via ffmpeg — auto-detected from `ffmpeg-static`, `FFMPEG_PATH`, config, or system PATH), WAV (fallback) |
 | **Auth** | Service Account OAuth2 (reuses `GOOGLE_APPLICATION_CREDENTIALS`) |
 | **Region** | `VERTEX_AI_TTS_REGION` env var (default: `us-central1`) |
 | **Pricing** | $0.50-1.00/M input tokens + $10-20/M audio output tokens |

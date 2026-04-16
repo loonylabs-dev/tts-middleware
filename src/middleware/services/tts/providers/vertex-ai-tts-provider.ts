@@ -7,7 +7,8 @@
  *
  * Supports 30 multilingual voices with auto-detect language and natural language
  * style control. Output is raw PCM (24kHz, 16-bit, mono) which is converted to
- * MP3 via ffmpeg or WAV as fallback.
+ * MP3 via ffmpeg (auto-detected from ffmpeg-static, FFMPEG_PATH, config, or system PATH)
+ * or WAV as fallback.
  *
  * Test/Admin only -- no EU data residency guarantees.
  *
@@ -15,6 +16,7 @@
  */
 
 import { spawn } from 'child_process';
+import { chmodSync, constants, accessSync } from 'fs';
 import type { TTSSynthesizeRequest, TTSResponse } from '../types';
 import { TTSProvider } from '../types';
 import { getMp3Duration } from '../utils/mp3-duration.utils';
@@ -47,6 +49,19 @@ export interface VertexAITTSConfig {
    * @default 'us-central1'
    */
   region?: string;
+
+  /**
+   * Path to ffmpeg binary for PCM-to-MP3 conversion.
+   *
+   * Resolution order (first match wins):
+   * 1. This config value
+   * 2. `FFMPEG_PATH` environment variable
+   * 3. `ffmpeg-static` npm package (if installed)
+   * 4. System `ffmpeg` in PATH
+   *
+   * If ffmpeg is not available, the provider falls back to WAV output.
+   */
+  ffmpegPath?: string;
 
   /**
    * Optional region rotation for quota management (429 / Resource Exhausted)
@@ -100,6 +115,7 @@ const DEFAULT_REGION = 'us-central1';
 export class VertexAITTSProvider extends BaseTTSProvider {
   private config: VertexAITTSConfig;
   private authClient: { getAccessToken: () => Promise<{ token?: string | null }> } | null = null;
+  private readonly ffmpegPath: string;
 
   /**
    * Creates a new Vertex AI TTS provider
@@ -117,12 +133,15 @@ export class VertexAITTSProvider extends BaseTTSProvider {
       regionRotation: config?.regionRotation,
     };
 
+    this.ffmpegPath = this.resolveFfmpegPath(config?.ffmpegPath);
+
     this.validateVertexAIConfig();
 
     this.log('info', 'Vertex AI TTS provider initialized', {
       hasCredentials: !!this.config.keyFilename,
       projectId: this.config.projectId ? '***' : undefined,
       region: this.config.region,
+      ffmpegPath: this.ffmpegPath,
     });
   }
 
@@ -399,6 +418,58 @@ export class VertexAITTSProvider extends BaseTTSProvider {
   }
 
   /**
+   * Resolve ffmpeg binary path with fallback chain:
+   * 1. Explicit config value
+   * 2. FFMPEG_PATH environment variable
+   * 3. ffmpeg-static npm package (optional peer dependency)
+   * 4. System ffmpeg in PATH
+   */
+  private resolveFfmpegPath(configPath?: string): string {
+    if (configPath) {
+      this.log('info', 'Using ffmpeg from config', { path: configPath });
+      return configPath;
+    }
+
+    if (process.env.FFMPEG_PATH) {
+      this.log('info', 'Using ffmpeg from FFMPEG_PATH env var', { path: process.env.FFMPEG_PATH });
+      return process.env.FFMPEG_PATH;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const ffmpegStatic = require('ffmpeg-static') as string | null;
+      if (ffmpegStatic) {
+        this.ensureExecutable(ffmpegStatic);
+        this.log('info', 'Using ffmpeg from ffmpeg-static package', { path: ffmpegStatic });
+        return ffmpegStatic;
+      }
+    } catch {
+      // ffmpeg-static not installed — continue to system fallback
+    }
+
+    return 'ffmpeg';
+  }
+
+  /**
+   * Ensure a binary file has execute permissions (Linux/macOS containers).
+   * No-op on Windows or if already executable.
+   */
+  private ensureExecutable(filePath: string): void {
+    if (process.platform === 'win32') return;
+
+    try {
+      accessSync(filePath, constants.X_OK);
+    } catch {
+      try {
+        chmodSync(filePath, 0o755);
+        this.log('info', 'Set execute permission on ffmpeg binary', { path: filePath });
+      } catch {
+        // Best-effort — if chmod fails, spawn will fail and trigger WAV fallback
+      }
+    }
+  }
+
+  /**
    * Convert raw PCM audio to the requested format
    *
    * @private
@@ -441,7 +512,7 @@ export class VertexAITTSProvider extends BaseTTSProvider {
    */
   private pcmToMp3(pcmBuffer: Buffer): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const ffmpeg = spawn('ffmpeg', [
+      const ffmpeg = spawn(this.ffmpegPath, [
         '-f', 's16le',
         '-ar', String(DEFAULT_SAMPLE_RATE),
         '-ac', '1',

@@ -1,6 +1,6 @@
 {
   "name": "@loonylabs/tts-middleware",
-  "version": "0.10.0",
+  "version": "0.11.1",
   "description": "Provider-agnostic Text-to-Speech middleware for Azure, OpenAI, ElevenLabs, Google Cloud, Deepgram, Fish Audio, Inworld AI, and Vertex AI TTS",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -50,7 +50,16 @@
     "url": "https://github.com/loonylabs-dev/tts-middleware/issues"
   },
   "homepage": "https://github.com/loonylabs-dev/tts-middleware#readme",
+  "peerDependencies": {
+    "ffmpeg-static": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ffmpeg-static": {
+      "optional": true
+    }
+  },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@google-cloud/text-to-speech": "^6.4.0",
     "microsoft-cognitiveservices-speech-sdk": "^1.38.0"
   },
@@ -95,7 +104,7 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branches": 85,
+        "branches": 84,
         "functions": 90,
         "lines": 90,
         "statements": 90

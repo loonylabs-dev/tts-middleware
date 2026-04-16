@@ -140,7 +140,7 @@ describe('VertexAITTSProvider', () => {
       new VertexAITTSProvider();
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Vertex AI TTS provider initialized'),
-        expect.objectContaining({ hasCredentials: true, region: 'us-central1' })
+        expect.objectContaining({ hasCredentials: true, region: 'us-central1', ffmpegPath: 'ffmpeg' })
       );
       consoleSpy.mockRestore();
     });
@@ -154,6 +154,67 @@ describe('VertexAITTSProvider', () => {
         expect.objectContaining({ region: 'europe-west4' })
       );
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('ffmpeg Path Resolution', () => {
+    test('uses config ffmpegPath when provided', () => {
+      const consoleSpy = jest.spyOn(console, 'info').mockImplementation();
+      new VertexAITTSProvider({ ffmpegPath: '/custom/ffmpeg' });
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Vertex AI TTS provider initialized'),
+        expect.objectContaining({ ffmpegPath: '/custom/ffmpeg' })
+      );
+      consoleSpy.mockRestore();
+    });
+
+    test('uses FFMPEG_PATH env var when set', () => {
+      process.env.FFMPEG_PATH = '/env/ffmpeg';
+      const consoleSpy = jest.spyOn(console, 'info').mockImplementation();
+      new VertexAITTSProvider();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Vertex AI TTS provider initialized'),
+        expect.objectContaining({ ffmpegPath: '/env/ffmpeg' })
+      );
+      consoleSpy.mockRestore();
+    });
+
+    test('config ffmpegPath takes priority over FFMPEG_PATH env var', () => {
+      process.env.FFMPEG_PATH = '/env/ffmpeg';
+      const consoleSpy = jest.spyOn(console, 'info').mockImplementation();
+      new VertexAITTSProvider({ ffmpegPath: '/config/ffmpeg' });
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Vertex AI TTS provider initialized'),
+        expect.objectContaining({ ffmpegPath: '/config/ffmpeg' })
+      );
+      consoleSpy.mockRestore();
+    });
+
+    test('falls back to system ffmpeg when no config or env var', () => {
+      delete process.env.FFMPEG_PATH;
+      const consoleSpy = jest.spyOn(console, 'info').mockImplementation();
+      new VertexAITTSProvider();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Vertex AI TTS provider initialized'),
+        expect.objectContaining({ ffmpegPath: 'ffmpeg' })
+      );
+      consoleSpy.mockRestore();
+    });
+
+    test('uses resolved ffmpeg path when spawning for MP3 conversion', async () => {
+      const { spawn } = require('child_process');
+      const provider = new VertexAITTSProvider({ ffmpegPath: '/custom/ffmpeg' });
+      const request: TTSSynthesizeRequest = {
+        text: 'test',
+        voice: { id: 'Kore' },
+        audio: { format: 'mp3' },
+      };
+
+      await provider.synthesize('test', 'Kore', request);
+
+      expect(spawn).toHaveBeenCalledWith('/custom/ffmpeg', expect.arrayContaining([
+        '-f', 's16le',
+      ]));
     });
   });
 
@@ -579,7 +640,7 @@ describe('VertexAITTSProvider', () => {
 
       await provider.synthesize('test', 'Kore', request);
 
-      expect(spawn).toHaveBeenCalledWith('ffmpeg', expect.arrayContaining([
+      expect(spawn).toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([
         '-f', 's16le',
         '-ar', '24000',
         '-ac', '1',
