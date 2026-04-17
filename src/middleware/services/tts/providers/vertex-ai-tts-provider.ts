@@ -515,13 +515,14 @@ export class VertexAITTSProvider extends BaseTTSProvider {
   }
 
   /**
-   * Build Vertex AI generateContent request payload for a multi-speaker dialog segment
+   * Build Vertex AI generateContent request payload for a dialog segment
    *
    * @private
-   * @param segment - The dialog segment (turns + optional stylePrompt)
-   * @param speakers - Speaker-to-voice mapping
-   * @param options - Provider options (temperature etc.)
-   * @param segmentIndex - Index of the segment (for error messages)
+   * @description Chooses the request shape based on the number of distinct
+   * speakers actually used in the segment's turns:
+   * - 1 speaker → `prebuiltVoiceConfig` (single-voice request)
+   * - 2 speakers → `multiSpeakerVoiceConfig` (Vertex AI requires exactly 2 entries)
+   * - >2 speakers → InvalidConfigError (split the segment so each sub-segment has ≤2 speakers)
    */
   private buildDialogRequest(
     segment: DialogSegment,
@@ -539,20 +540,47 @@ export class VertexAITTSProvider extends BaseTTSProvider {
 
     this.assertPayloadWithinLimits(synthesisText, segment.stylePrompt, segmentIndex);
 
+    const usedAliases = new Set(segment.turns.map((t) => t.speaker));
+    const usedSpeakers = speakers.filter((s) => usedAliases.has(s.speaker));
+
+    if (usedSpeakers.length === 0) {
+      throw new InvalidConfigError(
+        this.providerName,
+        `Segment #${segmentIndex} has no recognized speakers`,
+      );
+    }
+    if (usedSpeakers.length > 2) {
+      throw new InvalidConfigError(
+        this.providerName,
+        `Segment #${segmentIndex} uses ${usedSpeakers.length} distinct speakers, ` +
+          `but Vertex AI multi-speaker TTS supports at most 2 speakers per request. ` +
+          `Split the segment so each sub-segment has at most 2 speakers.`,
+      );
+    }
+
     const temperature = segment.temperature ?? options.temperature;
+
+    const speechConfig: Record<string, unknown> =
+      usedSpeakers.length === 1
+        ? {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: usedSpeakers[0].voice },
+            },
+          }
+        : {
+            multiSpeakerVoiceConfig: {
+              speakerVoiceConfigs: usedSpeakers.map((s) => ({
+                speaker: s.speaker,
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: s.voice },
+                },
+              })),
+            },
+          };
 
     const generationConfig: Record<string, unknown> = {
       responseModalities: ['AUDIO'],
-      speechConfig: {
-        multiSpeakerVoiceConfig: {
-          speakerVoiceConfigs: speakers.map((s) => ({
-            speaker: s.speaker,
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: s.voice },
-            },
-          })),
-        },
-      },
+      speechConfig,
     };
 
     if (typeof temperature === 'number') {

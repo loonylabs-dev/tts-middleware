@@ -349,7 +349,7 @@ LOG_LEVEL=info
 | **Languages** | 90+ with auto-detection (70+ for Gemini 3.1) |
 | **Voices** | 30 multilingual: Kore, Puck, Charon, Zephyr, Fenrir, Sulafat, Aoede, etc. |
 | **Style Control** | Natural language `stylePrompt` + inline audio tags (Gemini 3.1): `[sigh]`, `[whispering]`, `[laughing]`, `[short pause]`, … |
-| **Dialog Mode** | `synthesizeDialog()` for multi-segment, multi-speaker audio in a single call — aggregated billing, segment-level style prompts |
+| **Dialog Mode** | `synthesizeDialog()` for multi-segment, multi-speaker audio in a single call — aggregated billing, segment-level style prompts. **Max 2 distinct speakers per segment** (Vertex AI limit) — split scenes with a narrator into alternating solo/duo segments |
 | **Audio** | MP3 (via ffmpeg — auto-detected from `ffmpeg-static`, `FFMPEG_PATH`, config, or system PATH), WAV (fallback) |
 | **Auth** | Service Account OAuth2 (reuses `GOOGLE_APPLICATION_CREDENTIALS`) |
 | **Region** | `VERTEX_AI_TTS_REGION` env var (default: `us-central1`) |
@@ -413,6 +413,24 @@ hit Google, not just the first segment.
 combined (text + stylePrompt). Exceeding any limit throws
 `PayloadTooLargeError` with `segmentIndex` *before* the API call — no
 billing for rejected requests.
+
+**Max 2 speakers per segment:** Vertex AI's multi-speaker TTS requires
+exactly 2 voices in each `multiSpeakerVoiceConfig`. Scenes with a narrator
+plus two dialog speakers (3 voices total) must therefore be split into
+alternating segments:
+
+```typescript
+segments: [
+  { stylePrompt: 'Calm narrator', turns: [ { speaker: 'Narrator', text: '…' } ] },          // 1 voice → single-voice request
+  { stylePrompt: 'Friends arguing', turns: [ { speaker: 'Alice', … }, { speaker: 'Bob', … } ] }, // 2 voices → multi-speaker request
+  { stylePrompt: 'Narrator outro',  turns: [ { speaker: 'Narrator', text: '…' } ] },          // 1 voice again
+]
+```
+
+The provider auto-detects 1 vs 2 distinct speakers per segment and picks
+the correct request shape (`prebuiltVoiceConfig` vs `multiSpeakerVoiceConfig`).
+Segments with >2 distinct speakers throw `InvalidConfigError` with guidance
+to split the segment.
 
 ## GDPR / Compliance
 

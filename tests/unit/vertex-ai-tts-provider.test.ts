@@ -1129,5 +1129,77 @@ describe('VertexAITTSProvider', () => {
       const result = await provider.synthesizeDialog(makeRequest());
       expect(result.metadata.voice).toBe('Alice:Aoede,Bob:Puck');
     });
+
+    test('segment with a single speaker uses prebuiltVoiceConfig (not multiSpeakerVoiceConfig)', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [
+          { speaker: 'Narrator', voice: 'Charon' },
+          { speaker: 'Alice', voice: 'Aoede' },
+        ],
+        segments: [
+          {
+            stylePrompt: 'Calm narrator intro',
+            turns: [{ speaker: 'Narrator', text: 'It was a quiet morning.' }],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      expect(body.generationConfig.speechConfig.voiceConfig).toBeDefined();
+      expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Charon');
+      expect(body.generationConfig.speechConfig.multiSpeakerVoiceConfig).toBeUndefined();
+    });
+
+    test('throws InvalidConfigError when a segment uses more than 2 distinct speakers', async () => {
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesizeDialog({
+          speakers: [
+            { speaker: 'A', voice: 'Aoede' },
+            { speaker: 'B', voice: 'Puck' },
+            { speaker: 'C', voice: 'Charon' },
+          ],
+          segments: [
+            {
+              turns: [
+                { speaker: 'A', text: 'hi' },
+                { speaker: 'B', text: 'hello' },
+                { speaker: 'C', text: 'hey' },
+              ],
+            },
+          ],
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow(/at most 2 speakers/);
+    });
+
+    test('filters speakerVoiceConfigs to only the speakers actually used in a segment', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [
+          { speaker: 'Narrator', voice: 'Charon' },
+          { speaker: 'Alice', voice: 'Aoede' },
+          { speaker: 'Bob', voice: 'Puck' },
+        ],
+        segments: [
+          {
+            turns: [
+              { speaker: 'Alice', text: 'Hi Bob' },
+              { speaker: 'Bob', text: 'Hi Alice' },
+            ],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      const configs = body.generationConfig.speechConfig.multiSpeakerVoiceConfig.speakerVoiceConfigs;
+      expect(configs).toHaveLength(2);
+      const aliases = configs.map((c: { speaker: string }) => c.speaker);
+      expect(aliases).toEqual(['Alice', 'Bob']);
+      expect(aliases).not.toContain('Narrator');
+    });
   });
 });

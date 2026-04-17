@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Vertex AI request; the resulting PCM buffers are concatenated and converted
   once at the end. Segment-level `stylePrompt` and `temperature` overrides are
   supported.
+  - **Auto request-shape selection per segment:** 1 distinct speaker → `prebuiltVoiceConfig`
+    (single-voice request); 2 distinct speakers → `multiSpeakerVoiceConfig`;
+    \>2 speakers → `InvalidConfigError` with guidance to split the segment.
+    This reflects Vertex AI's hard constraint that `multi_speaker_voice_config`
+    must contain exactly 2 voices.
+  - **Speaker filtering:** Only speakers actually used in a segment's turns
+    are sent to Vertex AI — the global `speakers` list can contain more
+    speakers (e.g. a narrator that only appears in some segments).
 - **Client-side payload byte guard** — enforces the 8 KB combined / 4 KB text /
   4 KB prompt limits before the API call, throwing the new `PayloadTooLargeError`
   (with `segmentIndex` for dialog mode) so consumer apps avoid billing for rejected requests
