@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-04-17
+
+### Added
+- **Per-request Markdown debug logs** — provider-agnostic request/response logger
+  that writes one `.md` file per upstream TTS API call when
+  `DEBUG_TTS_REQUESTS=true` is set. Especially useful for debugging the v0.12.0
+  dialog mode, where each dialog segment produces exactly one Google Vertex AI
+  request: the log shows the full request body that was sent (so you can verify
+  the auto-selected `prebuiltVoiceConfig` vs `multiSpeakerVoiceConfig` shape,
+  speaker→voice mapping, and style prompt), response metadata, HTTP status,
+  timing, and any error body.
+  - Log directory: `<cwd>/logs/tts/requests/` (override via `TTS_REQUEST_LOG_DIR`)
+  - Filename pattern: `{ISO}_{provider}_{kind}[_seg{N}]_{shape}.md`
+  - Wired into `VertexAITTSProvider` for both `synthesize()` and
+    `synthesizeDialog()`; hook is available on `BaseTTSProvider` for every
+    provider to opt in
+  - No-op when disabled — zero runtime overhead
+  - Audio bytes are **not** written to disk; only metadata (mime, byte count,
+    candidate count, duration)
+  - New exports: `writeRequestLog`, `isRequestLoggingEnabled`, `TTSRequestLogEntry`,
+    `TTSRequestLogKind`
+
+---
+
 ## [0.12.0] - 2026-04-17
 
 ### Added

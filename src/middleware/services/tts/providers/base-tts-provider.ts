@@ -14,6 +14,11 @@ import type {
   TTSErrorCode,
 } from '../types';
 import { log as logUtil } from '../utils/logger.utils';
+import {
+  writeRequestLog,
+  isRequestLoggingEnabled,
+  type TTSRequestLogEntry,
+} from '../utils/request-logger.utils';
 
 /**
  * Base error class for all TTS errors
@@ -385,5 +390,55 @@ export abstract class BaseTTSProvider {
     meta?: Record<string, unknown>
   ): void {
     logUtil(this.providerName, level, message, meta);
+  }
+
+  /**
+   * Check if per-request debug logging is enabled.
+   *
+   * @protected
+   * @returns true when `DEBUG_TTS_REQUESTS` is truthy in the environment.
+   *
+   * @description Providers can gate expensive body capture/cloning behind this
+   * flag to avoid overhead when logging is disabled.
+   */
+  protected isRequestLoggingEnabled(): boolean {
+    return isRequestLoggingEnabled();
+  }
+
+  /**
+   * Write a debug Markdown log file for a single upstream API call.
+   *
+   * @protected
+   * @param entry - Log entry data. The provider name is injected automatically
+   *   if omitted. No-op when `DEBUG_TTS_REQUESTS` is disabled.
+   *
+   * @description Provider-agnostic request logger. Each call produces exactly
+   * one `.md` file under `<cwd>/logs/tts/requests/` (override via
+   * `TTS_REQUEST_LOG_DIR`). Use this to capture exactly what was sent to and
+   * received from an upstream TTS API (Vertex AI, Azure, etc.).
+   *
+   * @example
+   * ```typescript
+   * this.logRequest({
+   *   kind: 'dialog-segment',
+   *   timestamp: new Date().toISOString(),
+   *   model,
+   *   region,
+   *   endpointUrl: url,
+   *   segmentIndex: i,
+   *   speakers: usedSpeakers,
+   *   requestShape: 'multi-speaker',
+   *   requestBody,
+   *   httpStatus: response.status,
+   *   durationMs: Date.now() - startedAt,
+   *   responseBody: { audioBytes: buf.length, mimeType: 'audio/pcm' },
+   * });
+   * ```
+   */
+  protected logRequest(entry: Omit<TTSRequestLogEntry, 'provider'> & { provider?: string }): void {
+    writeRequestLog({
+      ...entry,
+      provider: entry.provider ?? this.providerName,
+    });
   }
 }

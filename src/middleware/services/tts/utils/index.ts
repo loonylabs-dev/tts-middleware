@@ -37,3 +37,14 @@ export {
 } from './retry.utils';
 
 export type { RetryConfig, RetryLogger } from './retry.utils';
+
+// Request logger (per-call Markdown debug logs, gated by DEBUG_TTS_REQUESTS)
+export {
+  writeRequestLog,
+  isRequestLoggingEnabled,
+} from './request-logger.utils';
+
+export type {
+  TTSRequestLogEntry,
+  TTSRequestLogKind,
+} from './request-logger.utils';

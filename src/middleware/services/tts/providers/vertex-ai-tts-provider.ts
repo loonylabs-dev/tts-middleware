@@ -33,6 +33,35 @@ import type {
   SynthesizeDialogRequest,
 } from '../types/provider-options.types';
 import { isQuotaError } from '../utils/retry.utils';
+import type { TTSRequestLogKind } from '../utils/request-logger.utils';
+
+/**
+ * Per-request debug context that callers can pass through to `callAPI()` and
+ * `callAPIWithRegionRotation()`. Populated with caller-known facts (segment
+ * index, speakers, shape) so the request logger can record them.
+ *
+ * When `DEBUG_TTS_REQUESTS` is disabled this is ignored and adds no cost.
+ */
+interface CallAPILogContext {
+  kind: TTSRequestLogKind;
+  segmentIndex?: number;
+  speakers?: Array<{ speaker: string; voice: string }>;
+  requestShape?: string;
+  extras?: Record<string, unknown>;
+}
+
+/**
+ * Try to extract a JSON-parseable object from an HTTP response error body.
+ * Falls back to returning the raw text.
+ */
+function parseErrorBody(raw: string): unknown {
+  if (!raw) return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
 
 /**
  * Vertex AI TTS configuration
@@ -242,11 +271,22 @@ export class VertexAITTSProvider extends BaseTTSProvider {
       requestedFormat,
     });
 
+    const logContext: CallAPILogContext = {
+      kind: 'single-synthesize',
+      requestShape: 'single-voice',
+      speakers: [{ speaker: 'default', voice: voiceId }],
+      extras: {
+        textLength: text.length,
+        requestedFormat,
+      },
+    };
+
     try {
       const { pcmBuffer, region: usedRegion } = await this.callAPIWithRegionRotation(
         requestBody,
         model,
         options.region,
+        logContext,
       );
       const { audioBuffer, audioFormat } = await this.convertPcmAudio(pcmBuffer, requestedFormat);
       const duration = Date.now() - startTime;
@@ -330,11 +370,17 @@ export class VertexAITTSProvider extends BaseTTSProvider {
         i,
       );
 
+      // Derive log context from the actually-built request body so what we log
+      // is exactly what callAPI() will send. Shape is inferred from the
+      // speechConfig variant chosen by buildDialogRequest().
+      const logContext = this.buildDialogLogContext(requestBody, segment, request.speakers, i);
+
       try {
         const { pcmBuffer, region } = await this.callAPIWithRegionRotation(
           requestBody,
           model,
           options.region,
+          logContext,
         );
         pcmChunks.push(pcmBuffer);
         segmentBillings.push({
@@ -599,6 +645,66 @@ export class VertexAITTSProvider extends BaseTTSProvider {
   }
 
   /**
+   * Build a debug log context for one dialog segment.
+   *
+   * @private
+   * @description Inspects the already-built request body so the logged shape
+   * and speaker mapping exactly match what will be sent upstream. Reading the
+   * body (instead of re-deriving from `segment.turns`) ensures the log stays
+   * truthful if `buildDialogRequest()` evolves.
+   */
+  private buildDialogLogContext(
+    requestBody: Record<string, unknown>,
+    segment: DialogSegment,
+    speakers: DialogSpeaker[],
+    segmentIndex: number,
+  ): CallAPILogContext {
+    const speechConfig =
+      (requestBody.generationConfig as Record<string, unknown> | undefined)?.speechConfig as
+        | Record<string, unknown>
+        | undefined;
+
+    let requestShape: 'single-voice' | 'multi-speaker' = 'single-voice';
+    let loggedSpeakers: Array<{ speaker: string; voice: string }> = [];
+
+    const multi = speechConfig?.multiSpeakerVoiceConfig as
+      | { speakerVoiceConfigs?: Array<{ speaker: string; voiceConfig?: { prebuiltVoiceConfig?: { voiceName?: string } } }> }
+      | undefined;
+
+    if (multi?.speakerVoiceConfigs && multi.speakerVoiceConfigs.length > 0) {
+      requestShape = 'multi-speaker';
+      loggedSpeakers = multi.speakerVoiceConfigs.map((c) => ({
+        speaker: c.speaker,
+        voice: c.voiceConfig?.prebuiltVoiceConfig?.voiceName ?? '(unknown)',
+      }));
+    } else {
+      const single = speechConfig?.voiceConfig as
+        | { prebuiltVoiceConfig?: { voiceName?: string } }
+        | undefined;
+      const voiceName = single?.prebuiltVoiceConfig?.voiceName;
+      // Find the alias that maps to this voice (for readability in the log)
+      const usedAliases = new Set(segment.turns.map((t) => t.speaker));
+      const usedSpeaker = speakers.find((s) => usedAliases.has(s.speaker) && s.voice === voiceName);
+      loggedSpeakers = voiceName
+        ? [{ speaker: usedSpeaker?.speaker ?? '(unknown)', voice: voiceName }]
+        : [];
+    }
+
+    return {
+      kind: 'dialog-segment',
+      segmentIndex,
+      requestShape,
+      speakers: loggedSpeakers,
+      extras: {
+        turnCount: segment.turns.length,
+        hasStylePrompt: !!segment.stylePrompt,
+        stylePromptBytes: segment.stylePrompt ? Buffer.byteLength(segment.stylePrompt, 'utf8') : 0,
+        temperature: (requestBody.generationConfig as Record<string, unknown> | undefined)?.temperature,
+      },
+    };
+  }
+
+  /**
    * Validate payload byte limits before sending to Vertex AI
    *
    * @private
@@ -658,10 +764,11 @@ export class VertexAITTSProvider extends BaseTTSProvider {
     requestBody: Record<string, unknown>,
     model: string,
     regionOverride?: string,
+    logContext?: CallAPILogContext,
   ): Promise<{ pcmBuffer: Buffer; region: string }> {
     // Per-request override: skip rotation entirely
     if (regionOverride) {
-      const pcmBuffer = await this.callAPI(requestBody, model, regionOverride);
+      const pcmBuffer = await this.callAPI(requestBody, model, regionOverride, logContext);
       return { pcmBuffer, region: regionOverride };
     }
 
@@ -670,7 +777,7 @@ export class VertexAITTSProvider extends BaseTTSProvider {
     // No rotation configured: use static region from constructor config
     if (!rotationConfig) {
       const region = this.config.region || DEFAULT_REGION;
-      const pcmBuffer = await this.callAPI(requestBody, model, region);
+      const pcmBuffer = await this.callAPI(requestBody, model, region, logContext);
       return { pcmBuffer, region };
     }
 
@@ -680,7 +787,7 @@ export class VertexAITTSProvider extends BaseTTSProvider {
 
     for (const region of regionsToTry) {
       try {
-        const pcmBuffer = await this.callAPI(requestBody, model, region);
+        const pcmBuffer = await this.callAPI(requestBody, model, region, logContext);
         return { pcmBuffer, region };
       } catch (error) {
         if (isQuotaError(error)) {
@@ -697,7 +804,7 @@ export class VertexAITTSProvider extends BaseTTSProvider {
     // Bonus attempt: try fallback one more time (alwaysTryFallback default: true)
     if (rotationConfig.alwaysTryFallback !== false) {
       try {
-        const pcmBuffer = await this.callAPI(requestBody, model, rotationConfig.fallback);
+        const pcmBuffer = await this.callAPI(requestBody, model, rotationConfig.fallback, logContext);
         return { pcmBuffer, region: rotationConfig.fallback };
       } catch (error) {
         if (!isQuotaError(error)) throw error;
@@ -715,29 +822,85 @@ export class VertexAITTSProvider extends BaseTTSProvider {
    * @param requestBody - The request payload
    * @param model - The model to use
    * @param region - The Vertex AI region to use
+   * @param logContext - Optional debug context. When provided (and
+   *   `DEBUG_TTS_REQUESTS` is enabled), this call writes a Markdown log file
+   *   with the full request body, response metadata, timing, and any error.
    * @returns Promise resolving to raw PCM audio buffer
    */
   private async callAPI(
     requestBody: Record<string, unknown>,
     model: string,
     region: string,
+    logContext?: CallAPILogContext,
   ): Promise<Buffer> {
     const accessToken = await this.getAccessToken();
 
     const projectId = this.config.projectId;
     const url = `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/${model}:generateContent`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const logEnabled = !!logContext && this.isRequestLoggingEnabled();
+    const timestamp = new Date().toISOString();
+    const startedAt = Date.now();
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+    } catch (err) {
+      // Network-level failure (no response received)
+      if (logEnabled) {
+        this.logRequest({
+          kind: logContext!.kind,
+          timestamp,
+          model,
+          region,
+          endpointUrl: url,
+          httpMethod: 'POST',
+          segmentIndex: logContext!.segmentIndex,
+          speakers: logContext!.speakers,
+          requestShape: logContext!.requestShape,
+          requestBody,
+          durationMs: Date.now() - startedAt,
+          error: {
+            name: (err as Error).name,
+            message: (err as Error).message,
+            stack: (err as Error).stack,
+          },
+          extras: logContext!.extras,
+        });
+      }
+      throw err;
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
+      if (logEnabled) {
+        this.logRequest({
+          kind: logContext!.kind,
+          timestamp,
+          model,
+          region,
+          endpointUrl: url,
+          httpMethod: 'POST',
+          segmentIndex: logContext!.segmentIndex,
+          speakers: logContext!.speakers,
+          requestShape: logContext!.requestShape,
+          requestBody,
+          httpStatus: response.status,
+          responseBody: parseErrorBody(errorText),
+          durationMs: Date.now() - startedAt,
+          error: {
+            message: `Vertex AI API error (${response.status})`,
+          },
+          extras: logContext!.extras,
+        });
+      }
       throw new Error(`Vertex AI API error (${response.status}): ${errorText}`);
     }
 
@@ -756,10 +919,55 @@ export class VertexAITTSProvider extends BaseTTSProvider {
 
     const inlineData = responseJson.candidates?.[0]?.content?.parts?.[0]?.inlineData;
     if (!inlineData?.data) {
+      if (logEnabled) {
+        this.logRequest({
+          kind: logContext!.kind,
+          timestamp,
+          model,
+          region,
+          endpointUrl: url,
+          httpMethod: 'POST',
+          segmentIndex: logContext!.segmentIndex,
+          speakers: logContext!.speakers,
+          requestShape: logContext!.requestShape,
+          requestBody,
+          httpStatus: response.status,
+          responseBody: responseJson,
+          durationMs: Date.now() - startedAt,
+          error: { message: 'Vertex AI API returned no audio data' },
+          extras: logContext!.extras,
+        });
+      }
       throw new Error('Vertex AI API returned no audio data');
     }
 
-    return Buffer.from(inlineData.data, 'base64');
+    const pcmBuffer = Buffer.from(inlineData.data, 'base64');
+
+    if (logEnabled) {
+      this.logRequest({
+        kind: logContext!.kind,
+        timestamp,
+        model,
+        region,
+        endpointUrl: url,
+        httpMethod: 'POST',
+        segmentIndex: logContext!.segmentIndex,
+        speakers: logContext!.speakers,
+        requestShape: logContext!.requestShape,
+        requestBody,
+        httpStatus: response.status,
+        responseBody: {
+          mimeType: inlineData.mimeType,
+          audioBytes: pcmBuffer.length,
+          audioBase64Length: inlineData.data.length,
+          candidateCount: responseJson.candidates?.length ?? 0,
+        },
+        durationMs: Date.now() - startedAt,
+        extras: logContext!.extras,
+      });
+    }
+
+    return pcmBuffer;
   }
 
   /**

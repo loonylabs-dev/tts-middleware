@@ -1202,4 +1202,157 @@ describe('VertexAITTSProvider', () => {
       expect(aliases).not.toContain('Narrator');
     });
   });
+
+  describe('Request Debug Logging', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const os = require('os');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path');
+
+    let tempDir: string;
+
+    beforeEach(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tts-vertex-log-'));
+      process.env.DEBUG_TTS_REQUESTS = 'true';
+      process.env.TTS_REQUEST_LOG_DIR = tempDir;
+    });
+
+    afterEach(() => {
+      delete process.env.DEBUG_TTS_REQUESTS;
+      delete process.env.TTS_REQUEST_LOG_DIR;
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('does not write logs when DEBUG_TTS_REQUESTS is unset', async () => {
+      delete process.env.DEBUG_TTS_REQUESTS;
+      const provider = new VertexAITTSProvider();
+      await provider.synthesize('hi', 'Kore', {
+        text: 'hi',
+        voice: { id: 'Kore' },
+        audio: { format: 'wav' },
+      });
+      expect(fs.readdirSync(tempDir)).toHaveLength(0);
+    });
+
+    test('writes one log file per dialog segment with multi-speaker shape', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [
+          { speaker: 'Alice', voice: 'Aoede' },
+          { speaker: 'Bob', voice: 'Puck' },
+        ],
+        segments: [
+          {
+            stylePrompt: 'casual',
+            turns: [
+              { speaker: 'Alice', text: 'hi' },
+              { speaker: 'Bob', text: 'hello' },
+            ],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      const files = fs.readdirSync(tempDir);
+      expect(files).toHaveLength(1);
+      expect(files[0]).toContain('dialog-segment');
+      expect(files[0]).toContain('seg0');
+      expect(files[0]).toContain('multi-speaker');
+
+      const md = fs.readFileSync(path.join(tempDir, files[0]), 'utf8');
+      expect(md).toContain('## Request Body');
+      expect(md).toContain('multiSpeakerVoiceConfig');
+      expect(md).toContain('`Alice` → `Aoede`');
+      expect(md).toContain('`Bob` → `Puck`');
+      expect(md).toContain('## Response');
+      expect(md).toContain('audioBytes');
+    });
+
+    test('logs single-voice shape when segment uses one speaker', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [
+          { speaker: 'Narrator', voice: 'Charon' },
+          { speaker: 'Alice', voice: 'Aoede' },
+        ],
+        segments: [
+          { turns: [{ speaker: 'Narrator', text: 'Once upon a time' }] },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      const [filename] = fs.readdirSync(tempDir);
+      expect(filename).toContain('single-voice');
+      const md = fs.readFileSync(path.join(tempDir, filename), 'utf8');
+      expect(md).toContain('`Narrator` → `Charon`');
+    });
+
+    test('writes error log with response body when API returns non-OK', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => '{"error":"bad request"}',
+      });
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesize('hi', 'Kore', {
+          text: 'hi',
+          voice: { id: 'Kore' },
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow();
+
+      const files = fs.readdirSync(tempDir);
+      expect(files).toHaveLength(1);
+      const md = fs.readFileSync(path.join(tempDir, files[0]), 'utf8');
+      expect(md).toContain('## Error');
+      expect(md).toContain('Vertex AI API error (400)');
+      expect(md).toContain('"error": "bad request"');
+      expect(md).toContain('- **HTTP Status**: 400');
+    });
+
+    test('writes error log when API returns no audio data', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ candidates: [{ content: { parts: [{}] } }] }),
+      });
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesize('hi', 'Kore', {
+          text: 'hi',
+          voice: { id: 'Kore' },
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow('no audio data');
+
+      const [filename] = fs.readdirSync(tempDir);
+      const md = fs.readFileSync(path.join(tempDir, filename), 'utf8');
+      expect(md).toContain('Vertex AI API returned no audio data');
+    });
+
+    test('writes error log when fetch throws (network failure)', async () => {
+      (fetch as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error('connect ECONNREFUSED'), { name: 'FetchError' }),
+      );
+      const provider = new VertexAITTSProvider();
+      await expect(
+        provider.synthesize('hi', 'Kore', {
+          text: 'hi',
+          voice: { id: 'Kore' },
+          audio: { format: 'wav' },
+        }),
+      ).rejects.toThrow();
+
+      const [filename] = fs.readdirSync(tempDir);
+      const md = fs.readFileSync(path.join(tempDir, filename), 'utf8');
+      expect(md).toContain('## Error');
+      expect(md).toContain('ECONNREFUSED');
+      expect(md).toContain('- **Name**: FetchError');
+      expect(md).not.toContain('- **HTTP Status**:');
+    });
+  });
 });

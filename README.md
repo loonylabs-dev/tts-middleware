@@ -432,6 +432,11 @@ the correct request shape (`prebuiltVoiceConfig` vs `multiSpeakerVoiceConfig`).
 Segments with >2 distinct speakers throw `InvalidConfigError` with guidance
 to split the segment.
 
+**Debugging dialog requests:** Set `DEBUG_TTS_REQUESTS=true` to have one
+Markdown file written per segment under `logs/tts/requests/`, capturing the
+exact request body, selected shape, speaker→voice mapping, HTTP status, and
+timing. See [Request Debug Logging](#advanced-features) below.
+
 ## GDPR / Compliance
 
 ### Provider Compliance Overview
@@ -526,6 +531,47 @@ setLogger(silentLogger);
 // Control log level
 setLogLevel('warn');
 ```
+
+</details>
+
+<details>
+<summary><strong>Request Debug Logging</strong></summary>
+
+For debugging, you can have the middleware write one Markdown file per upstream
+TTS API call (e.g. per Google Vertex AI `generateContent` invocation). This is
+especially useful for the dialog mode: each segment is one Google request, and
+the log shows the exact request body that was sent — so you can verify the
+auto-selected `prebuiltVoiceConfig` vs `multiSpeakerVoiceConfig` shape,
+speaker→voice mapping, style prompt, and temperature.
+
+```bash
+# Enable per-request debug logs
+export DEBUG_TTS_REQUESTS=true
+
+# Optional: override log directory (default: <cwd>/logs/tts/requests)
+export TTS_REQUEST_LOG_DIR=/tmp/my-tts-logs
+```
+
+Each call produces a file named like:
+
+```
+2026-04-17T14-30-00-000Z_vertex-ai_dialog-segment_seg0_multi-speaker.md
+```
+
+Contents include: timestamp, model, region, endpoint URL, HTTP status, duration,
+dialog context (segment index, request shape, speaker→voice mapping), the full
+request body (no truncation), response metadata (mime type, audio byte count,
+candidate count), and any error body.
+
+**What is *not* logged:** the audio bytes themselves — only metadata — so logs
+stay small and safe to inspect.
+
+When the env var is unset (or not truthy), logging is a complete no-op with no
+runtime cost.
+
+The logging hook lives on `BaseTTSProvider.logRequest()`, so any provider can
+opt in. Currently wired up for `VertexAITTSProvider` (`synthesize()` and
+`synthesizeDialog()`); other providers log on demand when they add the hook.
 
 </details>
 

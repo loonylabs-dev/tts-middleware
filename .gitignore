@@ -38,6 +38,9 @@ Thumbs.db
 # Test output
 output/
 
+# TTS request debug logs (DEBUG_TTS_REQUESTS=true)
+logs/
+
 # Temporary files
 *.tmp
 *.temp
