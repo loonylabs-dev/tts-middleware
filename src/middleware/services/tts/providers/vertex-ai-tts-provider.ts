@@ -23,8 +23,15 @@ import { getMp3Duration } from '../utils/mp3-duration.utils';
 import {
   BaseTTSProvider,
   InvalidConfigError,
+  PayloadTooLargeError,
 } from './base-tts-provider';
-import type { VertexAITTSProviderOptions, RegionRotationConfig } from '../types/provider-options.types';
+import type {
+  VertexAITTSProviderOptions,
+  RegionRotationConfig,
+  DialogSpeaker,
+  DialogSegment,
+  SynthesizeDialogRequest,
+} from '../types/provider-options.types';
 import { isQuotaError } from '../utils/retry.utils';
 
 /**
@@ -81,8 +88,20 @@ export interface VertexAITTSConfig {
 }
 
 const DEFAULT_MODEL = 'gemini-2.5-flash-preview-tts';
+const DEFAULT_DIALOG_MODEL = 'gemini-3.1-flash-tts-preview';
 const DEFAULT_SAMPLE_RATE = 24000;
 const DEFAULT_REGION = 'us-central1';
+
+/**
+ * Vertex AI Gemini TTS payload byte limits (UTF-8)
+ *
+ * @description Google rejects requests larger than these limits. We enforce them
+ * client-side so consumers get a typed PayloadTooLargeError *before* a billable
+ * API call is made.
+ */
+const GEMINI_TTS_MAX_TEXT_BYTES = 4000;
+const GEMINI_TTS_MAX_PROMPT_BYTES = 4000;
+const GEMINI_TTS_MAX_COMBINED_BYTES = 8000;
 
 /**
  * Vertex AI TTS provider implementation
@@ -267,7 +286,194 @@ export class VertexAITTSProvider extends BaseTTSProvider {
   }
 
   /**
-   * Build Vertex AI generateContent request payload
+   * Synthesize a multi-segment, multi-speaker dialog in a single call
+   *
+   * @description Runs one Vertex AI request per segment *sequentially* (keeps
+   * region rotation well-behaved and avoids quota bursts), concatenates the
+   * resulting raw PCM buffers, and converts once at the end. Billing aggregates
+   * characters across every turn and stylePrompt so consumer apps can charge
+   * their customers for the full amount actually sent to Google.
+   *
+   * Requires a Gemini 3.1 model. The 8 KB combined-byte limit is enforced per
+   * segment *before* the API call — consumers receive a typed PayloadTooLargeError
+   * without incurring cost.
+   *
+   * @param request - Dialog request with speakers and ordered segments
+   * @returns Single concatenated audio response with aggregated billing
+   * @throws {InvalidConfigError} If speakers/turns are invalid
+   * @throws {PayloadTooLargeError} If any segment exceeds the 8 KB limit
+   */
+  async synthesizeDialog(request: SynthesizeDialogRequest): Promise<TTSResponse> {
+    this.validateDialogRequest(request);
+
+    const startTime = Date.now();
+    const options = (request.providerOptions || {}) as VertexAITTSProviderOptions;
+    const model = options.model || DEFAULT_DIALOG_MODEL;
+    const requestedFormat = request.audio?.format || 'mp3';
+
+    this.log('debug', 'Synthesizing dialog with Vertex AI TTS', {
+      model,
+      segmentCount: request.segments.length,
+      speakerCount: request.speakers.length,
+      requestedFormat,
+    });
+
+    const pcmChunks: Buffer[] = [];
+    const segmentBillings: Array<{ characters: number; region: string }> = [];
+
+    for (let i = 0; i < request.segments.length; i++) {
+      const segment = request.segments[i];
+      const requestBody = this.buildDialogRequest(
+        segment,
+        request.speakers,
+        options,
+        i,
+      );
+
+      try {
+        const { pcmBuffer, region } = await this.callAPIWithRegionRotation(
+          requestBody,
+          model,
+          options.region,
+        );
+        pcmChunks.push(pcmBuffer);
+        segmentBillings.push({
+          characters: this.countSegmentCharacters(segment),
+          region,
+        });
+      } catch (error) {
+        this.log('error', 'Dialog segment synthesis failed', {
+          segmentIndex: i,
+          error: (error as Error).message,
+        });
+        throw this.handleError(error as Error, `during Vertex AI TTS dialog segment #${i}`);
+      }
+    }
+
+    const combinedPcm = Buffer.concat(pcmChunks);
+    const { audioBuffer, audioFormat } = await this.convertPcmAudio(
+      combinedPcm,
+      requestedFormat,
+    );
+    const duration = Date.now() - startTime;
+    const totalCharacters = segmentBillings.reduce(
+      (sum, s) => sum + s.characters,
+      0,
+    );
+
+    this.log('info', 'Dialog synthesis successful', {
+      segmentCount: request.segments.length,
+      characters: totalCharacters,
+      duration,
+      audioSize: audioBuffer.length,
+      audioFormat,
+    });
+
+    return {
+      audio: audioBuffer,
+      metadata: {
+        provider: this.providerName,
+        voice: request.speakers.map((s) => `${s.speaker}:${s.voice}`).join(','),
+        duration,
+        audioDuration: audioFormat === 'mp3' ? getMp3Duration(audioBuffer) : undefined,
+        audioFormat,
+        sampleRate: DEFAULT_SAMPLE_RATE,
+      },
+      billing: {
+        characters: totalCharacters,
+      },
+    };
+  }
+
+  /**
+   * Validate a dialog request (speakers unique, turns reference known speakers, etc.)
+   *
+   * @private
+   * @throws {InvalidConfigError} If the request is structurally invalid
+   */
+  private validateDialogRequest(request: SynthesizeDialogRequest): void {
+    if (!request.speakers || request.speakers.length === 0) {
+      throw new InvalidConfigError(
+        this.providerName,
+        'Dialog request requires at least one speaker',
+      );
+    }
+
+    if (!request.segments || request.segments.length === 0) {
+      throw new InvalidConfigError(
+        this.providerName,
+        'Dialog request requires at least one segment',
+      );
+    }
+
+    const speakerAliases = new Set<string>();
+    for (const s of request.speakers) {
+      if (!s.speaker || !s.voice) {
+        throw new InvalidConfigError(
+          this.providerName,
+          'Every speaker needs both "speaker" and "voice"',
+        );
+      }
+      if (!/^[A-Za-z0-9]+$/.test(s.speaker)) {
+        throw new InvalidConfigError(
+          this.providerName,
+          `Speaker alias "${s.speaker}" must be alphanumeric (no whitespace or symbols)`,
+        );
+      }
+      if (speakerAliases.has(s.speaker)) {
+        throw new InvalidConfigError(
+          this.providerName,
+          `Duplicate speaker alias "${s.speaker}"`,
+        );
+      }
+      speakerAliases.add(s.speaker);
+    }
+
+    for (let i = 0; i < request.segments.length; i++) {
+      const seg = request.segments[i];
+      if (!seg.turns || seg.turns.length === 0) {
+        throw new InvalidConfigError(
+          this.providerName,
+          `Segment #${i} has no turns`,
+        );
+      }
+      for (let j = 0; j < seg.turns.length; j++) {
+        const turn = seg.turns[j];
+        if (!turn.text || turn.text.trim().length === 0) {
+          throw new InvalidConfigError(
+            this.providerName,
+            `Segment #${i} turn #${j} has empty text`,
+          );
+        }
+        if (!speakerAliases.has(turn.speaker)) {
+          throw new InvalidConfigError(
+            this.providerName,
+            `Segment #${i} turn #${j} references unknown speaker "${turn.speaker}"`,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Count billable characters for a single dialog segment
+   *
+   * @private
+   * @description Counts all turn text plus the segment's stylePrompt.
+   * Speaker labels ("Alice: ") are included because they are part of what we
+   * send to Vertex AI.
+   */
+  private countSegmentCharacters(segment: DialogSegment): number {
+    const turnsChars = segment.turns.reduce(
+      (sum, t) => sum + `${t.speaker}: ${t.text}`.length,
+      0,
+    );
+    const promptChars = segment.stylePrompt?.length ?? 0;
+    return turnsChars + promptChars;
+  }
+
+  /**
+   * Build Vertex AI generateContent request payload (single-voice)
    *
    * @private
    */
@@ -280,6 +486,23 @@ export class VertexAITTSProvider extends BaseTTSProvider {
       ? `${options.stylePrompt} ${text}`
       : text;
 
+    this.assertPayloadWithinLimits(synthesisText, options.stylePrompt);
+
+    const generationConfig: Record<string, unknown> = {
+      responseModalities: ['AUDIO'],
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: voiceId,
+          },
+        },
+      },
+    };
+
+    if (typeof options.temperature === 'number') {
+      generationConfig.temperature = options.temperature;
+    }
+
     return {
       contents: [
         {
@@ -287,17 +510,139 @@ export class VertexAITTSProvider extends BaseTTSProvider {
           parts: [{ text: synthesisText }],
         },
       ],
-      generationConfig: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: voiceId,
-            },
-          },
-        },
-      },
+      generationConfig,
     };
+  }
+
+  /**
+   * Build Vertex AI generateContent request payload for a dialog segment
+   *
+   * @private
+   * @description Chooses the request shape based on the number of distinct
+   * speakers actually used in the segment's turns:
+   * - 1 speaker → `prebuiltVoiceConfig` (single-voice request)
+   * - 2 speakers → `multiSpeakerVoiceConfig` (Vertex AI requires exactly 2 entries)
+   * - >2 speakers → InvalidConfigError (split the segment so each sub-segment has ≤2 speakers)
+   */
+  private buildDialogRequest(
+    segment: DialogSegment,
+    speakers: DialogSpeaker[],
+    options: VertexAITTSProviderOptions,
+    segmentIndex: number,
+  ): Record<string, unknown> {
+    const turnsText = segment.turns
+      .map((t) => `${t.speaker}: ${t.text}`)
+      .join('\n');
+
+    const synthesisText = segment.stylePrompt
+      ? `${segment.stylePrompt}\n${turnsText}`
+      : turnsText;
+
+    this.assertPayloadWithinLimits(synthesisText, segment.stylePrompt, segmentIndex);
+
+    const usedAliases = new Set(segment.turns.map((t) => t.speaker));
+    const usedSpeakers = speakers.filter((s) => usedAliases.has(s.speaker));
+
+    if (usedSpeakers.length === 0) {
+      throw new InvalidConfigError(
+        this.providerName,
+        `Segment #${segmentIndex} has no recognized speakers`,
+      );
+    }
+    if (usedSpeakers.length > 2) {
+      throw new InvalidConfigError(
+        this.providerName,
+        `Segment #${segmentIndex} uses ${usedSpeakers.length} distinct speakers, ` +
+          `but Vertex AI multi-speaker TTS supports at most 2 speakers per request. ` +
+          `Split the segment so each sub-segment has at most 2 speakers.`,
+      );
+    }
+
+    const temperature = segment.temperature ?? options.temperature;
+
+    const speechConfig: Record<string, unknown> =
+      usedSpeakers.length === 1
+        ? {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: usedSpeakers[0].voice },
+            },
+          }
+        : {
+            multiSpeakerVoiceConfig: {
+              speakerVoiceConfigs: usedSpeakers.map((s) => ({
+                speaker: s.speaker,
+                voiceConfig: {
+                  prebuiltVoiceConfig: { voiceName: s.voice },
+                },
+              })),
+            },
+          };
+
+    const generationConfig: Record<string, unknown> = {
+      responseModalities: ['AUDIO'],
+      speechConfig,
+    };
+
+    if (typeof temperature === 'number') {
+      generationConfig.temperature = temperature;
+    }
+
+    return {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: synthesisText }],
+        },
+      ],
+      generationConfig,
+    };
+  }
+
+  /**
+   * Validate payload byte limits before sending to Vertex AI
+   *
+   * @private
+   * @throws {PayloadTooLargeError} If text or combined payload exceeds limits
+   */
+  private assertPayloadWithinLimits(
+    combinedText: string,
+    stylePrompt: string | undefined,
+    segmentIndex?: number,
+  ): void {
+    const combinedBytes = Buffer.byteLength(combinedText, 'utf8');
+    const promptBytes = stylePrompt ? Buffer.byteLength(stylePrompt, 'utf8') : 0;
+    const textBytes = combinedBytes - promptBytes;
+    const segmentLabel = segmentIndex !== undefined ? ` in segment #${segmentIndex}` : '';
+
+    if (textBytes > GEMINI_TTS_MAX_TEXT_BYTES) {
+      throw new PayloadTooLargeError(
+        this.providerName,
+        `Vertex AI TTS text${segmentLabel} is ${textBytes} bytes — exceeds ${GEMINI_TTS_MAX_TEXT_BYTES} byte limit. Split into smaller segments.`,
+        textBytes,
+        GEMINI_TTS_MAX_TEXT_BYTES,
+        segmentIndex,
+      );
+    }
+
+    if (promptBytes > GEMINI_TTS_MAX_PROMPT_BYTES) {
+      throw new PayloadTooLargeError(
+        this.providerName,
+        `Vertex AI TTS stylePrompt${segmentLabel} is ${promptBytes} bytes — exceeds ${GEMINI_TTS_MAX_PROMPT_BYTES} byte limit.`,
+        promptBytes,
+        GEMINI_TTS_MAX_PROMPT_BYTES,
+        segmentIndex,
+      );
+    }
+
+    if (combinedBytes > GEMINI_TTS_MAX_COMBINED_BYTES) {
+      throw new PayloadTooLargeError(
+        this.providerName,
+        `Vertex AI TTS combined payload${segmentLabel} is ${combinedBytes} bytes — exceeds ${GEMINI_TTS_MAX_COMBINED_BYTES} byte limit.`,
+        combinedBytes,
+        GEMINI_TTS_MAX_COMBINED_BYTES,
+        segmentIndex,
+      );
+    }
   }
 
   /**

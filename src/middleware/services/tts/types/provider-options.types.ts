@@ -8,6 +8,8 @@
  * @Future 🔮 Other providers typed but not implemented yet
  */
 
+import type { RetryConfig } from '../utils/retry.utils';
+
 /**
  * Azure Speech Services provider options
  *
@@ -657,10 +659,15 @@ export interface VertexAITTSProviderOptions {
    * @options
    * - 'gemini-2.5-flash-preview-tts': Budget, fast ($0.50/M input + $10/M audio output tokens)
    * - 'gemini-2.5-pro-preview-tts': Premium, natural ($1.00/M input + $20/M audio output tokens)
+   * - 'gemini-3.1-flash-tts-preview': Expressive with audio tags + native multi-speaker
+   *   ($1.00/M input + $20/M audio output tokens)
    *
    * @default 'gemini-2.5-flash-preview-tts'
    */
-  model?: 'gemini-2.5-flash-preview-tts' | 'gemini-2.5-pro-preview-tts';
+  model?:
+    | 'gemini-2.5-flash-preview-tts'
+    | 'gemini-2.5-pro-preview-tts'
+    | 'gemini-3.1-flash-tts-preview';
 
   /**
    * Natural language style instruction prepended to the text
@@ -668,11 +675,24 @@ export interface VertexAITTSProviderOptions {
    * @description Controls voice style/emotion via prompt engineering.
    * The instruction is prepended to the synthesis text, e.g. "Say cheerfully: {text}".
    *
+   * For Gemini 3.1 Flash TTS, inline audio tags like [sigh], [whispering],
+   * [laughing], [short pause] can additionally be embedded directly in the text.
+   *
    * @example 'Say in a spooky whisper:'
    * @example 'Read this cheerfully:'
    * @example 'Speak in a calm, professional tone:'
    */
   stylePrompt?: string;
+
+  /**
+   * Output randomness / expressiveness (Gemini 3.1 Flash TTS only)
+   *
+   * @description Controls how varied the generated speech is. Higher values
+   * produce more expressive delivery. Typical range 0.0–2.0.
+   *
+   * @default undefined (provider default)
+   */
+  temperature?: number;
 
   /**
    * Per-request Vertex AI region override
@@ -684,6 +704,102 @@ export interface VertexAITTSProviderOptions {
    * @example 'us-central1'
    */
   region?: string;
+}
+
+/**
+ * Speaker definition for dialog synthesis
+ *
+ * @description Maps a speaker alias (used in dialog turns) to a prebuilt voice.
+ * Speaker aliases must be alphanumeric without whitespace.
+ *
+ * @example { speaker: 'Alice', voice: 'Aoede' }
+ */
+export interface DialogSpeaker {
+  /** Alphanumeric alias referenced in DialogTurn.speaker */
+  speaker: string;
+  /** Prebuilt voice name (e.g. 'Kore', 'Puck', 'Charon', 'Aoede') */
+  voice: string;
+}
+
+/**
+ * Single turn in a dialog segment
+ *
+ * @description Text may contain Gemini 3.1 audio tags like [sigh], [whispering],
+ * [short pause], etc. The assigned speaker must match a DialogSpeaker alias.
+ */
+export interface DialogTurn {
+  /** Must match a DialogSpeaker.speaker in the surrounding request */
+  speaker: string;
+  /** Turn text, optionally with inline audio tags */
+  text: string;
+}
+
+/**
+ * Dialog segment — one synthesis request with a shared style prompt
+ *
+ * @description Each segment maps to exactly one Vertex AI request. Use
+ * multiple segments when you need different style prompts for different
+ * parts of a larger dialog (e.g. narrator → argument → narrator).
+ */
+export interface DialogSegment {
+  /** Global style direction for this segment (applies to all turns) */
+  stylePrompt?: string;
+  /** Ordered turns within this segment */
+  turns: DialogTurn[];
+  /** Optional per-segment temperature override */
+  temperature?: number;
+}
+
+/**
+ * Request payload for VertexAITTSProvider.synthesizeDialog()
+ *
+ * @description Multi-segment, multi-speaker dialog synthesis. The provider
+ * runs one Vertex AI request per segment sequentially, concatenates the
+ * raw PCM buffers, and returns a single converted audio file. Billing
+ * aggregates characters across all segments and turns.
+ *
+ * Requires model 'gemini-3.1-flash-tts-preview' (or newer).
+ *
+ * @example
+ * ```typescript
+ * const result = await provider.synthesizeDialog({
+ *   speakers: [
+ *     { speaker: 'Narrator', voice: 'Charon' },
+ *     { speaker: 'Alice',    voice: 'Aoede'  },
+ *     { speaker: 'Bob',      voice: 'Puck'   },
+ *   ],
+ *   segments: [
+ *     {
+ *       stylePrompt: 'Calm audiobook narration',
+ *       turns: [{ speaker: 'Narrator', text: 'The tavern was loud that night.' }],
+ *     },
+ *     {
+ *       stylePrompt: 'Heated argument between two friends',
+ *       turns: [
+ *         { speaker: 'Alice', text: '[shouting] You lied to me!' },
+ *         { speaker: 'Bob',   text: '[sigh] Calm down, would you?' },
+ *       ],
+ *     },
+ *   ],
+ *   voice: { languageCode: 'en-US' },
+ *   audio: { format: 'mp3' },
+ *   providerOptions: { model: 'gemini-3.1-flash-tts-preview' },
+ * });
+ * ```
+ */
+export interface SynthesizeDialogRequest {
+  /** Speaker-to-voice mapping, referenced by DialogTurn.speaker */
+  speakers: DialogSpeaker[];
+  /** One or more dialog segments, synthesized in order */
+  segments: DialogSegment[];
+  /** Language code and other voice-level config (voice.id is ignored in dialog mode) */
+  voice?: { languageCode?: string; id?: string };
+  /** Audio output options (format, etc.) */
+  audio?: { format?: 'mp3' | 'wav' | string };
+  /** Provider-specific options (model, region, temperature) */
+  providerOptions?: VertexAITTSProviderOptions;
+  /** Retry config for transient errors, as in TTSSynthesizeRequest */
+  retry?: boolean | RetryConfig;
 }
 
 /**

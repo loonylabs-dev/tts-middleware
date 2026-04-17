@@ -133,6 +133,27 @@ export class NetworkError extends TTSError {
 }
 
 /**
+ * Error thrown when the input payload exceeds a provider byte/character limit.
+ *
+ * @description Thrown *before* the remote API call, so consumers can split or
+ * shorten the input without incurring a failed request billing. For multi-segment
+ * dialogs, `segmentIndex` identifies the offending segment.
+ */
+export class PayloadTooLargeError extends TTSError {
+  constructor(
+    provider: string,
+    message: string,
+    public readonly actualBytes?: number,
+    public readonly maxBytes?: number,
+    public readonly segmentIndex?: number,
+    cause?: Error
+  ) {
+    super(provider, 'PAYLOAD_TOO_LARGE' as TTSErrorCode, message, cause);
+    this.name = 'PayloadTooLargeError';
+  }
+}
+
+/**
  * Abstract base class for all TTS providers
  *
  * @abstract

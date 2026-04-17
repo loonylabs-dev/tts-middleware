@@ -91,6 +91,7 @@ export {
   ProviderUnavailableError,
   SynthesisFailedError,
   NetworkError,
+  PayloadTooLargeError,
 } from './providers';
 
 // ===== Utilities =====

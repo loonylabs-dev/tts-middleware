@@ -37,6 +37,10 @@ export type {
   FishAudioProviderOptions,
   InworldProviderOptions,
   VertexAITTSProviderOptions,
+  DialogSpeaker,
+  DialogTurn,
+  DialogSegment,
+  SynthesizeDialogRequest,
   ProviderOptions,
 } from './provider-options.types';
 

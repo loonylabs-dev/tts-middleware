@@ -14,6 +14,7 @@ export {
   ProviderUnavailableError,
   SynthesisFailedError,
   NetworkError,
+  PayloadTooLargeError,
 } from './base-tts-provider';
 
 // Provider implementations

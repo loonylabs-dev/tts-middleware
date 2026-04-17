@@ -59,12 +59,13 @@ describe('TTSErrorCode enum', () => {
     expect(TTSErrorCode.PROVIDER_UNAVAILABLE).toBe('PROVIDER_UNAVAILABLE');
     expect(TTSErrorCode.SYNTHESIS_FAILED).toBe('SYNTHESIS_FAILED');
     expect(TTSErrorCode.NETWORK_ERROR).toBe('NETWORK_ERROR');
+    expect(TTSErrorCode.PAYLOAD_TOO_LARGE).toBe('PAYLOAD_TOO_LARGE');
     expect(TTSErrorCode.UNKNOWN_ERROR).toBe('UNKNOWN_ERROR');
   });
 
-  test('has exactly 7 error codes', () => {
+  test('has exactly 8 error codes', () => {
     const errorKeys = Object.keys(TTSErrorCode);
-    expect(errorKeys).toHaveLength(7);
+    expect(errorKeys).toHaveLength(8);
   });
 });
 
