@@ -1052,10 +1052,10 @@ describe('VertexAITTSProvider', () => {
         audio: { format: 'wav' },
       });
 
-      // Segment 1: "Calm"(4) + "Alice: Hello"(12) + "Bob: Hi"(7) = 23
-      // Segment 2: "Excited"(7) + "Alice: Whoa!"(12) = 19
-      // Total: 42
-      expect(result.billing.characters).toBe(42);
+      // Segment 1 (2 speakers → prefix kept): "Calm"(4) + "Alice: Hello"(12) + "Bob: Hi"(7) = 23
+      // Segment 2 (1 speaker → prefix dropped): "Excited"(7) + "Whoa!"(5) = 12
+      // Total: 35
+      expect(result.billing.characters).toBe(35);
     });
 
     test('throws PayloadTooLargeError when a segment exceeds 4000 bytes with segment index', async () => {
@@ -1150,6 +1150,73 @@ describe('VertexAITTSProvider', () => {
       expect(body.generationConfig.speechConfig.voiceConfig).toBeDefined();
       expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe('Charon');
       expect(body.generationConfig.speechConfig.multiSpeakerVoiceConfig).toBeUndefined();
+    });
+
+    test('single-speaker segment omits the "Speaker: " prefix (matches Google single-voice docs)', async () => {
+      // Google's documented single-voice input format passes plain text
+      // without any speaker label (https://ai.google.dev/gemini-api/docs/speech-generation).
+      // Gemini's synthesis classifier will otherwise treat the label as
+      // unrecognized content and sometimes read it aloud (especially for
+      // fantasy names the tokenizer doesn't know).
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [{ speaker: 'Turbosahne', voice: 'Aoede' }],
+        segments: [
+          {
+            stylePrompt: 'Energetic narrator',
+            turns: [{ speaker: 'Turbosahne', text: 'Hallo, ich bin eine Ente.' }],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      const text = body.contents[0].parts[0].text as string;
+      expect(text).not.toContain('Turbosahne:');
+      expect(text).toContain('Hallo, ich bin eine Ente.');
+      // stylePrompt is still inlined above the turn text
+      expect(text.startsWith('Energetic narrator\n')).toBe(true);
+    });
+
+    test('multi-speaker segment keeps the "Speaker: " prefix (needed for voice routing)', async () => {
+      const provider = new VertexAITTSProvider();
+      await provider.synthesizeDialog({
+        speakers: [
+          { speaker: 'Alice', voice: 'Aoede' },
+          { speaker: 'Bob', voice: 'Puck' },
+        ],
+        segments: [
+          {
+            turns: [
+              { speaker: 'Alice', text: 'Hi Bob!' },
+              { speaker: 'Bob', text: 'Hey.' },
+            ],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      const body = JSON.parse((fetch as jest.Mock).mock.calls[0][1].body);
+      const text = body.contents[0].parts[0].text as string;
+      expect(text).toContain('Alice: Hi Bob!');
+      expect(text).toContain('Bob: Hey.');
+    });
+
+    test('single-speaker billing drops the "Speaker: " prefix length', async () => {
+      const provider = new VertexAITTSProvider();
+      const result = await provider.synthesizeDialog({
+        speakers: [{ speaker: 'A', voice: 'Kore' }],
+        segments: [
+          {
+            stylePrompt: 'Style',
+            turns: [{ speaker: 'A', text: 'hello' }],
+          },
+        ],
+        audio: { format: 'wav' },
+      });
+
+      // "Style"(5) + "hello"(5) — prefix "A: " is NOT billed for single-voice
+      expect(result.billing.characters).toBe(10);
     });
 
     test('throws InvalidConfigError when a segment uses more than 2 distinct speakers', async () => {

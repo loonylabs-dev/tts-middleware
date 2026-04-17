@@ -505,13 +505,20 @@ export class VertexAITTSProvider extends BaseTTSProvider {
    * Count billable characters for a single dialog segment
    *
    * @private
-   * @description Counts all turn text plus the segment's stylePrompt.
-   * Speaker labels ("Alice: ") are included because they are part of what we
-   * send to Vertex AI.
+   * @description Counts exactly what `buildDialogRequest()` places in the
+   * `contents[0].parts[0].text` string sent to Gemini:
+   *   - The stylePrompt (if any)
+   *   - Each turn's text
+   *   - The `"Speaker: "` prefix is added ONLY for multi-speaker segments
+   *     (matching the prefix logic in `buildDialogRequest`), since Google's
+   *     documented single-voice TTS format uses plain text without a label.
    */
   private countSegmentCharacters(segment: DialogSegment): number {
+    const distinctSpeakers = new Set(segment.turns.map((t) => t.speaker)).size;
+    const includeSpeakerPrefix = distinctSpeakers > 1;
     const turnsChars = segment.turns.reduce(
-      (sum, t) => sum + `${t.speaker}: ${t.text}`.length,
+      (sum, t) =>
+        sum + (includeSpeakerPrefix ? `${t.speaker}: ${t.text}`.length : t.text.length),
       0,
     );
     const promptChars = segment.stylePrompt?.length ?? 0;
@@ -576,8 +583,22 @@ export class VertexAITTSProvider extends BaseTTSProvider {
     options: VertexAITTSProviderOptions,
     segmentIndex: number,
   ): Record<string, unknown> {
+    // The `"Speaker: "` prefix is ONLY needed for multi-speaker segments, where
+    // Gemini uses the label to look up the matching `speakerVoiceConfigs` entry
+    // and route each turn to the correct voice. For single-speaker segments
+    // there is nothing to route — the prefix becomes an unrecognized token
+    // that Gemini's speech-synthesis classifier can mistakenly render aloud
+    // (e.g. pronouncing "Alice" as part of the audio).
+    //
+    // This mirrors Google's documented single-voice format, which uses plain
+    // text without any speaker label:
+    //   - https://ai.google.dev/gemini-api/docs/speech-generation
+    //   - https://docs.cloud.google.com/text-to-speech/docs/gemini-tts
+    const distinctSpeakers = new Set(segment.turns.map((t) => t.speaker)).size;
+    const includeSpeakerPrefix = distinctSpeakers > 1;
+
     const turnsText = segment.turns
-      .map((t) => `${t.speaker}: ${t.text}`)
+      .map((t) => (includeSpeakerPrefix ? `${t.speaker}: ${t.text}` : t.text))
       .join('\n');
 
     const synthesisText = segment.stylePrompt

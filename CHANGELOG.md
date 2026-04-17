@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.2] - 2026-04-17
+
+### Fixed
+- **Speaker name occasionally pronounced in single-voice dialog segments** —
+  `VertexAITTSProvider.synthesizeDialog()` previously prefixed every turn with
+  `"Speaker: "` regardless of whether the segment was single- or multi-speaker.
+  For single-speaker segments (those routed through `prebuiltVoiceConfig`) this
+  is inconsistent with Google's documented single-voice TTS input format, which
+  passes plain text without any speaker label
+  ([ai.google.dev/gemini-api/docs/speech-generation](https://ai.google.dev/gemini-api/docs/speech-generation),
+  [docs.cloud.google.com/text-to-speech/docs/gemini-tts](https://docs.cloud.google.com/text-to-speech/docs/gemini-tts)).
+  Gemini's speech-synthesis classifier would sometimes treat the unrecognized
+  label as content and render it aloud — most commonly with fantasy names the
+  tokenizer doesn't map to a known role word. The prefix is now emitted **only**
+  for multi-speaker segments, where it is functionally required so Gemini can
+  route each turn to the matching `speakerVoiceConfigs` entry. Billing in
+  `countSegmentCharacters()` adjusted to match the actual bytes sent.
+- No impact on `synthesize()` (non-dialog single-voice path) — that code path
+  already used plain text.
+- No impact on existing multi-speaker dialog requests — the prefix is kept
+  unchanged there.
+
 ## [0.12.1] - 2026-04-17
 
 ### Added
