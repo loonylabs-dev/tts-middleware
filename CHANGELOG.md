@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.3] - 2026-05-01
+
+### Fixed
+- **Vertex AI empty-response not retried** — `isRetryableError()` did not classify
+  `"Vertex AI API returned no audio data"` as retryable. This error occurs when
+  the Gemini TTS API responds with HTTP 200 but an empty `inlineData` body — a
+  known transient behavior of the preview model under sequential load. The error
+  message now matches the `no audio data` pattern so `executeWithRetry()` applies
+  the standard exponential backoff (up to 3 retries, 1 s → 2 s → 4 s) instead of
+  rethrowing immediately. Affects both `synthesize()` and `synthesizeDialog()`.
+
 ## [0.12.2] - 2026-04-17
 
 ### Fixed

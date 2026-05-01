@@ -88,7 +88,8 @@ export function isRetryableError(error: unknown): boolean {
       msg.includes('econnrefused') ||
       msg.includes('enotfound') ||
       msg.includes('econnreset') ||
-      msg.includes('socket hang up')
+      msg.includes('socket hang up') ||
+      msg.includes('no audio data')  // Vertex AI: HTTP 200 with empty response body (transient)
     ) {
       return true;
     }
