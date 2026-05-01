@@ -102,6 +102,11 @@ describe('Retry Utilities', () => {
         const error = new Error('socket hang up');
         expect(isRetryableError(error)).toBe(true);
       });
+
+      test('Vertex AI empty response (no audio data) is retryable', () => {
+        const error = new Error('Vertex AI API returned no audio data');
+        expect(isRetryableError(error)).toBe(true);
+      });
     });
 
     describe('non-retryable errors', () => {
